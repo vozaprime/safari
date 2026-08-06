@@ -9,6 +9,7 @@ import {
   updateUserAction,
   deleteUserAction,
   resetUserPasswordAction,
+  disableUserTwoFactorAction,
 } from "../../actions";
 
 export default async function UsersPage() {
@@ -51,6 +52,27 @@ export default async function UsersPage() {
                 </div>
                 <SubmitButton pendingText="..." variant="ghost">Şifre ata</SubmitButton>
               </form>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-medium ${
+                    u.twoFactorEnabled ? "bg-emerald/10 text-emerald" : "bg-sand/60 text-stone"
+                  }`}
+                >
+                  2FA {u.twoFactorEnabled ? "açık" : "kapalı"}
+                </span>
+                {u.twoFactorEnabled && (
+                  <form action={disableUserTwoFactorAction.bind(null, u.id)}>
+                    <ConfirmButton
+                      confirmText={`"${u.email}" kullanıcısının iki aşamalı doğrulaması sıfırlansın mı? Kullanıcı yeniden kurana kadar yalnızca şifreyle giriş yapar.`}
+                      className="text-xs text-red-500 hover:underline"
+                    >
+                      2FA sıfırla
+                    </ConfirmButton>
+                  </form>
+                )}
+              </div>
+
               {u.id !== session.userId && users.length > 1 && (
                 <form action={deleteUserAction.bind(null, u.id)} className="ml-auto">
                   <ConfirmButton confirmText={`"${u.email}" kullanıcısını silmek istediğinize emin misiniz?`} className="text-xs text-red-500 hover:underline">

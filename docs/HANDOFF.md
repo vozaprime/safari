@@ -1,7 +1,7 @@
 # SAFARI CONSULTING — Proje Devir Notu (Handoff)
 
 > Bu dosya, sohbet geçişlerinde bağlamı korumak içindir. Yeni oturuma başlarken önce bunu oku.
-> Son güncelleme: 2026-08-05
+> Son güncelleme: 2026-08-06
 
 ## 1. Proje nedir
 Çok dilli (TR / EN / RU), sinematik/scrollytelling tasarımlı kurumsal danışmanlık web sitesi + tam kapsamlı yönetim paneli (CMS) + Blog modülü. Şirket: **SAFARI CONSULTING** (finans, yatırım, uluslararası ticaret, kurumsal danışmanlık).
@@ -13,7 +13,7 @@
 ## 2. Teknoloji
 - **Next.js 15** (App Router, RSC, server actions) + **React 19** + **TypeScript** + **Tailwind CSS 4**
 - **Prisma + PostgreSQL** (Prisma Postgres bulutu — hem yerel hem canlı AYNI DB'yi kullanır)
-- Kimlik: **jose** (JWT çerez) + **bcryptjs**
+- Kimlik: **jose** (JWT çerez) + **bcryptjs** + **2FA/TOTP** (`otpauth` + `qrcode`)
 - E-posta: **nodemailer** (SMTP, panelden ayarlanır; şifre AES-256-GCM ile şifreli saklanır)
 - Dosya yükleme: **@vercel/blob** (PUBLIC store)
 - Animasyon: **lenis** (yumuşak scroll) + saf rAF (framer-motion/GSAP YOK — kaldırıldı)
@@ -29,7 +29,7 @@
 - Roller: **admin** (her şey) / **editor** (ayarlar, kullanıcılar, aktivite HARİÇ).
 
 ## 5. Veri modeli (prisma/schema.prisma)
-`User` (role, tokenVersion, resetToken), `Service`+`ServiceTranslation` (13 hizmet, 3 dil, image), `Reference` (logo), `PageContent` (key+locale), `ContactMessage` (ip, notes, status), `Setting` (key/value), `AuditLog`, `LoginAttempt`, `Post`+`PostTranslation` (blog, 3 dil, cover, published).
+`User` (role, tokenVersion, resetToken, **twoFactorEnabled/twoFactorSecret(şifreli)/twoFactorBackupCodes(hash'li)**), `Service`+`ServiceTranslation` (13 hizmet, 3 dil, image), `Reference` (logo), `PageContent` (key+locale), `ContactMessage` (ip, notes, status), `Setting` (key/value), `AuditLog`, `LoginAttempt`, `Post`+`PostTranslation` (blog, 3 dil, cover, published).
 
 ## 6. Tamamlanan işler (kronolojik özet)
 1. Site iskeleti + 13 hizmetin TR/EN/RU tohum içeriği.
@@ -41,16 +41,18 @@
 7. **Zengin metin editörü** (RichTextEditor): araç çubuğu (kalın/italik/başlık/alıntı/liste) + canlı önizleme. Format: mini-markdown (`## `, `> `, `**`, `- `). Paylaşılan render katmanı: `src/lib/richtext.tsx` (`parseBlocks`, `renderInline`, `ProseText`). ArticleBody + tüm içerik alanları bunu kullanır.
 8. **Yönetim paneli (P1+P2+P3):** ikonlu/aktif kenar çubuğu + mobil çekmece, toast bildirimleri, silme onayları, pending butonlar; Blob dosya yükleme; talep yönetimi (arama/sayfalama/detay/not/CSV/toplu/mailto); hizmet ekle/sil/sırala/görsel; içerik dil sekmeli editör; dashboard grafikleri; güvenlik (rate limit, çoklu kullanıcı/roller, e-posta ile şifre sıfırlama, tokenVersion "tüm oturumları kapat", audit log, SMTP şifreleme).
 9. **Eksik/yarım özellikler tamamlandı:** ölü ayarlar siteye bağlandı (SEO/GA/logo/favicon/sosyal), iletişim formu spam koruması (honeypot + süre + IP limiti), sitemap.xml + robots.txt, **Blog modülü** (admin + public + nav), **medya kütüphanesi** (`/admin/media`).
+10. **2FA (TOTP) eklendi (2026-08-06):** `otpauth` + `qrcode`. Ayarlar'da kurulum (QR + tek seferlik yedek kodlar), girişte `/admin/2fa` challenge (TOTP veya yedek kod), Kullanıcılar sayfasında admin "2FA sıfırla" kurtarma. Şifreli secret (`crypto.ts` AES-GCM), sha256 hash'li yedek kodlar, kısa ömürlü `sc_2fa` pending çerezi. **Uçtan uca test edildi** (tek kullanımlık test hesabıyla; hesap+kayıtlar sonra temizlendi). Gerçek admin 2FA'sı KAPALI bırakıldı.
+11. **Git deposu kuruldu (2026-08-06):** `git init` (main), ilk commit + 2FA commit'i. `.gitignore` sırları ve büyük medyayı (`*.m4a` vb.) hariç tutar. Not: proje uzak (remote) repoya bağlı DEĞİL.
 
 ## 7. ÖNEMLİ teknik notlar / tuzaklar
 - **CRLF hatası (çözüldü):** Tarayıcı formları uzun metni `\r\n` ile gönderir; `parseBlocks` ve server action'lar artık `\r\n?` → `\n` normalize eder. Yeni metin render bileşeni yazarken paylaşılan `parseBlocks` kullan.
 - **force-dynamic:** DB-içerikli tüm public sayfalar (`[locale]/page`, about, services, services/[slug], references, contact, blog, blog/[slug]) `export const dynamic = "force-dynamic"` — panel değişiklikleri anında yansısın diye. Yeni içerik sayfası eklerken bunu ekle.
 - **Blob store PUBLIC olmalı** (private store `access:"public"` ile hata verir). Yükleme yoksa Uploader "URL yapıştır" ile de çalışır.
 - **Aynı DB:** Yerel `npm run dev`/`start` ve canlı AYNI Postgres'i kullanır — yereldeki panel değişikliği canlıyı etkiler.
-- **In-app tarayıcı gezinme takıntısı:** `navigate` bazen ana sayfaya düşüyor; login için `form.requestSubmit()` veya JS ile submit daha güvenilir.
+- **In-app tarayıcı gezinme takıntısı:** `navigate` bazen ana sayfaya düşüyor; login için `form.requestSubmit()` veya JS ile submit daha güvenilir. Aynı quirk server-action redirect sonrası da URL'i stale gösterebilir — gerçek durumu doğrulamak için hedef sayfaya (`/admin`) elle git.
+- **2FA & middleware:** `src/middleware.ts` `/admin/*` altında geçerli `sc_session` ister. `/admin/2fa` challenge sayfası TAM oturum yokken çalıştığından `publicAdmin` istisnasındadır (kendi pending-`sc_2fa` çerez guard'ı var). Yeni bir oturum-öncesi admin rotası eklersen bu istisnaya da ekle.
 
 ## 8. Bilinen açık / opsiyonel işler (yapılmadı)
-- **2FA** (bilinçli ertelendi; e-posta ile şifre sıfırlama kurtarma sağlıyor).
 - Makale-içi görseller: Higgsfield günlük limiti nedeniyle bazı hizmet makalelerinde konuya en yakın MEVCUT görseller eşleştirildi; limit yenilenince birebir özel görseller üretilebilir.
 - Gerçek iletişim bilgileri/telefon/adres hâlâ yer tutucu olabilir — panel > Ayarlar'dan güncellenmeli.
 - SMTP boş olabilir; doldurulunca e-posta bildirimi + şifre sıfırlama e-postaları aktifleşir.

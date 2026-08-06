@@ -16,6 +16,9 @@ model User {
   tokenVersion     Int       @default(0)
   resetToken       String?
   resetTokenExpiry DateTime?
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String? // AES-GCM encrypted base32 TOTP secret
+  twoFactorBackupCodes String? // JSON array of sha256-hashed recovery codes
   createdAt        DateTime  @default(now())
 }
 

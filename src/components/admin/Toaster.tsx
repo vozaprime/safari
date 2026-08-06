@@ -17,6 +17,12 @@ const MESSAGES: Record<string, { kind: "success" | "error"; text: string }> = {
   pwwrong: { kind: "error", text: "Mevcut şifre hatalı." },
   pwshort: { kind: "error", text: "Yeni şifre en az 8 karakter olmalı." },
   forbidden: { kind: "error", text: "Bu işlem için yetkiniz yok." },
+  "2fa_setup": { kind: "success", text: "Kurulum başladı — QR'ı taratın ve kodu doğrulayın." },
+  "2fa_on": { kind: "success", text: "İki aşamalı doğrulama etkinleştirildi." },
+  "2fa_off": { kind: "success", text: "İki aşamalı doğrulama kapatıldı." },
+  "2fa_bad": { kind: "error", text: "Kod doğrulanamadı. Tekrar deneyin." },
+  "2fa_pw": { kind: "error", text: "Şifre hatalı." },
+  "2fa_reset": { kind: "success", text: "Kullanıcının iki aşamalı doğrulaması sıfırlandı." },
 };
 
 export default function Toaster() {

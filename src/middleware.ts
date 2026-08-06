@@ -17,7 +17,8 @@ export async function middleware(req: NextRequest) {
   const publicAdmin =
     pathname.startsWith("/admin/login") ||
     pathname.startsWith("/admin/forgot") ||
-    pathname.startsWith("/admin/reset");
+    pathname.startsWith("/admin/reset") ||
+    pathname.startsWith("/admin/2fa"); // mid-login TOTP step: guarded by its own pending-2FA cookie
 
   if (pathname.startsWith("/admin") && !publicAdmin) {
     const token = req.cookies.get("sc_session")?.value;

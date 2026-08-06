@@ -3,11 +3,18 @@ import { PageHeader, AdminCard, inputClass, labelClass, Field } from "@/componen
 import SubmitButton from "@/components/admin/SubmitButton";
 import Uploader from "@/components/admin/Uploader";
 import ConfirmButton from "@/components/admin/ConfirmButton";
+import { getVerifiedSession } from "@/lib/auth";
+import { decryptSecret } from "@/lib/crypto";
+import { otpauthQrDataUrl, backupCodesRemaining } from "@/lib/totp";
 import {
   updateSettingsAction,
   changePasswordAction,
   testSmtpAction,
   signOutEverywhereAction,
+  startTwoFactorSetupAction,
+  confirmTwoFactorAction,
+  disableTwoFactorAction,
+  readStashedBackupCodes,
 } from "../../actions";
 
 export default async function SettingsPage() {
@@ -15,6 +22,21 @@ export default async function SettingsPage() {
   const s: Record<string, string> = {};
   for (const row of rows) s[row.key] = row.value;
   const smtpConfigured = !!s.smtp_pass;
+
+  // Two-factor state for the current account
+  const session = await getVerifiedSession();
+  const me = session ? await prisma.user.findUnique({ where: { id: session.userId } }) : null;
+  const twoFAEnabled = !!me?.twoFactorEnabled;
+  const twoFAPending = !!me?.twoFactorSecret && !twoFAEnabled;
+  const backupRemaining = backupCodesRemaining(me?.twoFactorBackupCodes);
+  const stashedCodes = await readStashedBackupCodes();
+  let qrDataUrl = "";
+  let manualKey = "";
+  if (twoFAPending && me?.twoFactorSecret) {
+    const secret = decryptSecret(me.twoFactorSecret);
+    manualKey = secret.replace(/(.{4})/g, "$1 ").trim();
+    qrDataUrl = await otpauthQrDataUrl(secret, me.email);
+  }
 
   return (
     <div className="max-w-2xl">
@@ -116,6 +138,79 @@ export default async function SettingsPage() {
           <SubmitButton pendingText="Güncelleniyor..." variant="outline">Şifreyi güncelle</SubmitButton>
         </form>
       </AdminCard>
+
+      <div id="twofa" className="mt-6 scroll-mt-24">
+        <AdminCard
+          title="İki Aşamalı Doğrulama (2FA)"
+          description="Girişte şifreye ek olarak doğrulama uygulamasından 6 haneli kod ister."
+        >
+          {twoFAEnabled ? (
+            <div className="mt-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
+                  <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                İki aşamalı doğrulama etkin.
+              </div>
+              <p className="mt-1.5 text-xs text-stone">
+                Kalan yedek kod: <strong>{backupRemaining}</strong>. Uygulamanıza ve yedek kodlarınıza erişiminizi
+                kaybederseniz bir yönetici hesabınızın 2FA&apos;sını sıfırlayabilir.
+              </p>
+              <form action={disableTwoFactorAction} className="mt-4 space-y-3">
+                <Field label="Kapatmak için şifreniz" htmlFor="twofa_pw">
+                  <input id="twofa_pw" name="password" type="password" required autoComplete="current-password" className={inputClass} />
+                </Field>
+                <SubmitButton pendingText="Kapatılıyor..." variant="outline" className="!border-red-200 !text-red-600 hover:!bg-red-50">
+                  2FA&apos;yı kapat
+                </SubmitButton>
+              </form>
+            </div>
+          ) : twoFAPending ? (
+            <div className="mt-4 flex flex-col gap-5 sm:flex-row sm:items-start">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qrDataUrl} alt="2FA QR kodu" width={180} height={180} className="shrink-0 self-center rounded-lg border border-sand bg-white p-2 sm:self-start" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-stone">
+                  1. Doğrulama uygulamanızla QR&apos;ı taratın veya bu anahtarı elle girin:
+                </p>
+                <code className="mt-1.5 block break-all rounded bg-sand/40 px-3 py-2 font-mono text-xs tracking-wider text-forest">
+                  {manualKey}
+                </code>
+
+                {stashedCodes.length > 0 && (
+                  <div className="mt-4 rounded-lg border border-gold/40 bg-gold/5 p-4">
+                    <p className="text-xs font-medium text-forest">
+                      Yedek kodlar — güvenli bir yere kaydedin. Her kod bir kez kullanılır ve bu liste yalnızca şimdi gösterilir.
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-sm text-forest">
+                      {stashedCodes.map((c) => (
+                        <span key={c} className="rounded bg-white px-2 py-1 text-center tracking-wider">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <form action={confirmTwoFactorAction} className="mt-4 space-y-3">
+                  <Field label="2. Uygulamadaki 6 haneli kodu girin" htmlFor="code">
+                    <input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" required placeholder="123456" className={inputClass} />
+                  </Field>
+                  <SubmitButton pendingText="Doğrulanıyor...">Doğrula ve etkinleştir</SubmitButton>
+                </form>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4">
+              <p className="text-sm leading-relaxed text-stone">
+                Doğrulama uygulaması (Google Authenticator, Authy, 1Password vb.) ile hesabınıza ek bir güvenlik katmanı ekleyin.
+                Kurulumda tek seferlik yedek kodlar da verilir.
+              </p>
+              <form action={startTwoFactorSetupAction} className="mt-4">
+                <SubmitButton pendingText="Hazırlanıyor...">İki aşamalı doğrulamayı kur</SubmitButton>
+              </form>
+            </div>
+          )}
+        </AdminCard>
+      </div>
 
       <AdminCard title="Oturum güvenliği" description="Şüpheli bir durumda tüm cihazlardaki oturumları sonlandırın." className="mt-6">
         <form action={signOutEverywhereAction} className="mt-4">

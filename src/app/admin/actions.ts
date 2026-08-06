@@ -3,11 +3,24 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { prisma } from "@/lib/db";
-import { createSession, destroySession, getVerifiedSession } from "@/lib/auth";
+import {
+  createSession,
+  destroySession,
+  getVerifiedSession,
+  createPending2FA,
+  getPending2FA,
+  clearPending2FA,
+} from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import { encryptSecret, randomToken } from "@/lib/crypto";
+import { encryptSecret, decryptSecret, randomToken } from "@/lib/crypto";
+import {
+  generateTwoFactorSecret,
+  verifyTwoFactorToken,
+  generateBackupCodes,
+  consumeBackupCode,
+} from "@/lib/totp";
 import { sendMail } from "@/lib/mail";
 
 async function requireSession() {
@@ -64,12 +77,78 @@ export async function loginAction(formData: FormData) {
     redirect("/admin/login?error=1");
   }
 
+  // Password verified. If the account has 2FA, defer the real session until the
+  // TOTP challenge is passed — only a short-lived pending marker is issued here.
+  if (user.twoFactorEnabled) {
+    await createPending2FA(user.id, remember);
+    redirect("/admin/2fa");
+  }
+
   await createSession(
     { userId: user.id, email: user.email, name: user.name, role: (user.role as "admin" | "editor") ?? "admin", tv: user.tokenVersion },
     remember
   );
   await logAudit(user.email, "login", "auth");
   redirect("/admin");
+}
+
+/** Step 2 of login for 2FA accounts: verify a TOTP code or a backup code. */
+export async function verifyTwoFactorLoginAction(formData: FormData) {
+  const pending = await getPending2FA();
+  if (!pending) redirect("/admin/login?error=1");
+
+  const code = String(formData.get("code") ?? "").trim();
+
+  const hdrs = await headers();
+  const ip = (hdrs.get("x-forwarded-for") ?? "").split(",")[0].trim() || "unknown";
+  const windowStart = new Date(Date.now() - 15 * 60 * 1000);
+  const failKey = `2fa:${pending.uid}`;
+  const recentFails = await prisma.loginAttempt.count({
+    where: { key: { in: [failKey, ip] }, success: false, createdAt: { gte: windowStart } },
+  });
+  if (recentFails >= 8) {
+    await clearPending2FA();
+    redirect("/admin/login?error=locked");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: pending.uid } });
+  if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
+    await clearPending2FA();
+    redirect("/admin/login?error=1");
+  }
+
+  const secret = decryptSecret(user.twoFactorSecret);
+  let ok = secret ? verifyTwoFactorToken(secret, code) : false;
+
+  // Fall back to single-use backup codes.
+  if (!ok) {
+    const remaining = consumeBackupCode(user.twoFactorBackupCodes, code);
+    if (remaining !== null) {
+      ok = true;
+      await prisma.user.update({ where: { id: user.id }, data: { twoFactorBackupCodes: remaining } });
+      await logAudit(user.email, "2fa_backup_used", "auth");
+    }
+  }
+
+  await prisma.loginAttempt.create({ data: { key: failKey, success: ok } });
+  if (ip !== "unknown") await prisma.loginAttempt.create({ data: { key: ip, success: ok } });
+
+  if (!ok) {
+    redirect("/admin/2fa?error=1");
+  }
+
+  await clearPending2FA();
+  await createSession(
+    { userId: user.id, email: user.email, name: user.name, role: (user.role as "admin" | "editor") ?? "admin", tv: user.tokenVersion },
+    pending.remember
+  );
+  await logAudit(user.email, "login", "auth");
+  redirect("/admin");
+}
+
+export async function cancelTwoFactorLoginAction() {
+  await clearPending2FA();
+  redirect("/admin/login");
 }
 
 export async function logoutAction() {
@@ -149,6 +228,104 @@ export async function performPasswordResetAction(token: string, formData: FormDa
   });
   await logAudit(user.email, "reset_complete", "auth");
   redirect("/admin/login?reset=done");
+}
+
+/* ---------------- Two-factor (TOTP) enrollment ---------------- */
+
+const TWOFA_CODES_COOKIE = "sc_2fa_codes";
+
+/** Stores freshly-generated plaintext backup codes in a short-lived encrypted
+ * cookie so the settings page can display them exactly once. */
+async function stashBackupCodes(plain: string[]) {
+  const store = await cookies();
+  store.set(TWOFA_CODES_COOKIE, encryptSecret(JSON.stringify(plain)), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 15,
+    path: "/",
+  });
+}
+
+/** Reads and clears the one-time backup-code display cookie. */
+export async function readStashedBackupCodes(): Promise<string[]> {
+  const store = await cookies();
+  const raw = store.get(TWOFA_CODES_COOKIE)?.value;
+  if (!raw) return [];
+  try {
+    const codes = JSON.parse(decryptSecret(raw));
+    return Array.isArray(codes) ? codes : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Begins enrollment: generates a secret + backup codes, stores them (disabled
+ * until confirmed) and shows the QR. Regenerating overwrites any pending setup. */
+export async function startTwoFactorSetupAction() {
+  const session = await requireSession();
+  const secret = generateTwoFactorSecret();
+  const { plain, hashed } = generateBackupCodes();
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: {
+      twoFactorSecret: encryptSecret(secret),
+      twoFactorBackupCodes: JSON.stringify(hashed),
+      twoFactorEnabled: false,
+    },
+  });
+  await stashBackupCodes(plain);
+  redirect("/admin/settings?toast=2fa_setup#twofa");
+}
+
+/** Confirms enrollment by validating a code against the pending secret. */
+export async function confirmTwoFactorAction(formData: FormData) {
+  const session = await requireSession();
+  const code = String(formData.get("code") ?? "").trim();
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!user || !user.twoFactorSecret) redirect("/admin/settings?toast=2fa_bad#twofa");
+
+  const secret = decryptSecret(user.twoFactorSecret);
+  if (!secret || !verifyTwoFactorToken(secret, code)) {
+    redirect("/admin/settings?toast=2fa_bad#twofa");
+  }
+
+  await prisma.user.update({ where: { id: user.id }, data: { twoFactorEnabled: true } });
+  const store = await cookies();
+  store.delete(TWOFA_CODES_COOKIE);
+  await logAudit(user.email, "2fa_enabled", "user");
+  redirect("/admin/settings?toast=2fa_on#twofa");
+}
+
+/** Disables 2FA on the current account (password required). */
+export async function disableTwoFactorAction(formData: FormData) {
+  const session = await requireSession();
+  const password = String(formData.get("password") ?? "");
+  const user = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    redirect("/admin/settings?toast=2fa_pw#twofa");
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { twoFactorEnabled: false, twoFactorSecret: null, twoFactorBackupCodes: null },
+  });
+  const store = await cookies();
+  store.delete(TWOFA_CODES_COOKIE);
+  await logAudit(user.email, "2fa_disabled", "user");
+  redirect("/admin/settings?toast=2fa_off#twofa");
+}
+
+/** Admin recovery: clears another user's 2FA so they can sign in again. */
+export async function disableUserTwoFactorAction(userId: number) {
+  const session = await requireAdmin();
+  const target = await prisma.user.findUnique({ where: { id: userId } });
+  if (!target) redirect("/admin/users");
+  await prisma.user.update({
+    where: { id: userId },
+    data: { twoFactorEnabled: false, twoFactorSecret: null, twoFactorBackupCodes: null },
+  });
+  await logAudit(session.email, `2fa_reset:${target.email}`, "user");
+  redirect("/admin/users?toast=2fa_reset");
 }
 
 /* ---------------- Services ---------------- */
