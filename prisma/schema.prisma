@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  passwordHash     String
+  name             String
+  role             String    @default("admin") // admin | editor
+  tokenVersion     Int       @default(0)
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+model Service {
+  id           Int                  @id @default(autoincrement())
+  slug         String               @unique
+  icon         String
+  image        String               @default("")
+  order        Int                  @default(0)
+  visible      Boolean              @default(true)
+  translations ServiceTranslation[]
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userEmail String   @default("")
+  action    String // create | update | delete | login | logout | ...
+  entity    String // service | reference | content | settings | message | user | auth
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model LoginAttempt {
+  id        Int      @id @default(autoincrement())
+  key       String // email or ip
+  success   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+model ServiceTranslation {
+  id          Int     @id @default(autoincrement())
+  serviceId   Int
+  locale      String
+  title       String
+  summary     String
+  description String
+  scope       String  @default("[]")
+  service     Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, locale])
+}
+
+model Reference {
+  id      Int     @id @default(autoincrement())
+  name    String
+  logo    String  @default("")
+  order   Int     @default(0)
+  visible Boolean @default(true)
+}
+
+model PageContent {
+  id     Int    @id @default(autoincrement())
+  key    String
+  locale String
+  value  String
+
+  @@unique([key, locale])
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String   @default("")
+  company   String   @default("")
+  service   String   @default("")
+  message   String
+  locale    String   @default("tr")
+  status    String   @default("new")
+  notes     String   @default("")
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model Post {
+  id           Int               @id @default(autoincrement())
+  slug         String            @unique
+  cover        String            @default("")
+  published    Boolean           @default(false)
+  order        Int               @default(0)
+  createdAt    DateTime          @default(now())
+  translations PostTranslation[]
+}
+
+model PostTranslation {
+  id      Int    @id @default(autoincrement())
+  postId  Int
+  locale  String
+  title   String
+  excerpt String @default("")
+  body    String @default("")
+  post    Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, locale])
+}

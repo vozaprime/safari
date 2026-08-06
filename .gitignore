@@ -1,0 +1,19 @@
+node_modules/
+.next/
+out/
+*.log
+.env
+prisma/*.db
+prisma/*.db-journal
+public/uploads/*
+!public/uploads/.gitkeep
+.DS_Store
+
+.vercel
+.env*
+
+# Büyük medya / ham kayıtlar (git'e girmemeli)
+*.m4a
+*.mp4
+*.mov
+*.wav

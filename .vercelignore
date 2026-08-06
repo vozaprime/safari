@@ -1,0 +1,7 @@
+prisma/*.db
+prisma/*.db-journal
+scripts/
+.claude/
+README.md
+Dockerfile
+.env

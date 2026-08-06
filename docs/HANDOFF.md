@@ -1,0 +1,65 @@
+# SAFARI CONSULTING — Proje Devir Notu (Handoff)
+
+> Bu dosya, sohbet geçişlerinde bağlamı korumak içindir. Yeni oturuma başlarken önce bunu oku.
+> Son güncelleme: 2026-08-05
+
+## 1. Proje nedir
+Çok dilli (TR / EN / RU), sinematik/scrollytelling tasarımlı kurumsal danışmanlık web sitesi + tam kapsamlı yönetim paneli (CMS) + Blog modülü. Şirket: **SAFARI CONSULTING** (finans, yatırım, uluslararası ticaret, kurumsal danışmanlık).
+
+- Proje kökü: `D:\PROJELER\SAFARI CONSULTING`
+- Platform: Windows, PowerShell + Git Bash. Node v24, npm.
+- **Canlı:** https://safari-consulting.vercel.app  ·  Panel: https://safari-consulting.vercel.app/admin
+
+## 2. Teknoloji
+- **Next.js 15** (App Router, RSC, server actions) + **React 19** + **TypeScript** + **Tailwind CSS 4**
+- **Prisma + PostgreSQL** (Prisma Postgres bulutu — hem yerel hem canlı AYNI DB'yi kullanır)
+- Kimlik: **jose** (JWT çerez) + **bcryptjs**
+- E-posta: **nodemailer** (SMTP, panelden ayarlanır; şifre AES-256-GCM ile şifreli saklanır)
+- Dosya yükleme: **@vercel/blob** (PUBLIC store)
+- Animasyon: **lenis** (yumuşak scroll) + saf rAF (framer-motion/GSAP YOK — kaldırıldı)
+
+## 3. Dağıtım / ortam
+- Vercel projesi: `vozas-projects/safari-consulting` (hesap: vozaprime). `npx vercel deploy --prod --yes` ile dağıt.
+- Vercel env (production): `DATABASE_URL`, `SESSION_SECRET`, `SITE_URL`, `BLOB_READ_WRITE_TOKEN` (+ BLOB_STORE_ID vs. — Blob store PUBLIC).
+- `.env` (yerel) `DATABASE_URL` ve `SESSION_SECRET` içerir; `.vercelignore` scripts/, .env vb. hariç tutar.
+- **Build komutu:** `prisma generate && next build`. Şema değişince `npx prisma db push` + `npx prisma generate`.
+
+## 4. Panel giriş
+- URL: `/admin`  ·  E-posta: `admin@safariconsulting.com`  ·  Şifre: `SafariAdmin2026!`
+- Roller: **admin** (her şey) / **editor** (ayarlar, kullanıcılar, aktivite HARİÇ).
+
+## 5. Veri modeli (prisma/schema.prisma)
+`User` (role, tokenVersion, resetToken), `Service`+`ServiceTranslation` (13 hizmet, 3 dil, image), `Reference` (logo), `PageContent` (key+locale), `ContactMessage` (ip, notes, status), `Setting` (key/value), `AuditLog`, `LoginAttempt`, `Post`+`PostTranslation` (blog, 3 dil, cover, published).
+
+## 6. Tamamlanan işler (kronolojik özet)
+1. Site iskeleti + 13 hizmetin TR/EN/RU tohum içeriği.
+2. Vitrin: ana sayfa, hakkımızda, hizmetler(+detay), referanslar, iletişim. Palet: orman yeşili/altın/fildişi, serif başlık (Playfair) + Inter.
+3. **Higgsfield MCP** ile üretilen 3 hero videosu + ~20 marka görseli (zümrüt/altın). MCP kuruldu, OAuth ile bağlandı (Plus plan). Not: günlük görsel üretim limiti var.
+4. **Scrollytelling ana sayfa**: StoryHero (scroll ile video scrub — `video.currentTime` scroll'a bağlı, loop DEĞİL), ProcessStory (4 bölüm pinned, cross-fade), ServiceUniverse (4 kategori pinned), ServiceIndex (editoryal indeks, hover'da imleci takip eden görsel), cam kartlı "Neden Biz", pusula rozeti sayaçlar (StatRing), kayan referans logoları (marquee).
+5. Hizmet detayları **dergisel makale** (ArticleBody): drop-cap, altın çizgili `## başlık`, `> alıntı` bloğu, makale-içi görsel. İçerik 13 hizmet × 3 dil, her biri 600+ kelime (paralel ajanlarla yazıldı).
+6. Sayfa header'larına konuya özel PageHero görselleri.
+7. **Zengin metin editörü** (RichTextEditor): araç çubuğu (kalın/italik/başlık/alıntı/liste) + canlı önizleme. Format: mini-markdown (`## `, `> `, `**`, `- `). Paylaşılan render katmanı: `src/lib/richtext.tsx` (`parseBlocks`, `renderInline`, `ProseText`). ArticleBody + tüm içerik alanları bunu kullanır.
+8. **Yönetim paneli (P1+P2+P3):** ikonlu/aktif kenar çubuğu + mobil çekmece, toast bildirimleri, silme onayları, pending butonlar; Blob dosya yükleme; talep yönetimi (arama/sayfalama/detay/not/CSV/toplu/mailto); hizmet ekle/sil/sırala/görsel; içerik dil sekmeli editör; dashboard grafikleri; güvenlik (rate limit, çoklu kullanıcı/roller, e-posta ile şifre sıfırlama, tokenVersion "tüm oturumları kapat", audit log, SMTP şifreleme).
+9. **Eksik/yarım özellikler tamamlandı:** ölü ayarlar siteye bağlandı (SEO/GA/logo/favicon/sosyal), iletişim formu spam koruması (honeypot + süre + IP limiti), sitemap.xml + robots.txt, **Blog modülü** (admin + public + nav), **medya kütüphanesi** (`/admin/media`).
+
+## 7. ÖNEMLİ teknik notlar / tuzaklar
+- **CRLF hatası (çözüldü):** Tarayıcı formları uzun metni `\r\n` ile gönderir; `parseBlocks` ve server action'lar artık `\r\n?` → `\n` normalize eder. Yeni metin render bileşeni yazarken paylaşılan `parseBlocks` kullan.
+- **force-dynamic:** DB-içerikli tüm public sayfalar (`[locale]/page`, about, services, services/[slug], references, contact, blog, blog/[slug]) `export const dynamic = "force-dynamic"` — panel değişiklikleri anında yansısın diye. Yeni içerik sayfası eklerken bunu ekle.
+- **Blob store PUBLIC olmalı** (private store `access:"public"` ile hata verir). Yükleme yoksa Uploader "URL yapıştır" ile de çalışır.
+- **Aynı DB:** Yerel `npm run dev`/`start` ve canlı AYNI Postgres'i kullanır — yereldeki panel değişikliği canlıyı etkiler.
+- **In-app tarayıcı gezinme takıntısı:** `navigate` bazen ana sayfaya düşüyor; login için `form.requestSubmit()` veya JS ile submit daha güvenilir.
+
+## 8. Bilinen açık / opsiyonel işler (yapılmadı)
+- **2FA** (bilinçli ertelendi; e-posta ile şifre sıfırlama kurtarma sağlıyor).
+- Makale-içi görseller: Higgsfield günlük limiti nedeniyle bazı hizmet makalelerinde konuya en yakın MEVCUT görseller eşleştirildi; limit yenilenince birebir özel görseller üretilebilir.
+- Gerçek iletişim bilgileri/telefon/adres hâlâ yer tutucu olabilir — panel > Ayarlar'dan güncellenmeli.
+- SMTP boş olabilir; doldurulunca e-posta bildirimi + şifre sıfırlama e-postaları aktifleşir.
+- İlk şifre değiştirilmeli (canlı, herkese açık).
+
+## 9. Yerel çalıştırma
+```bash
+npm install
+npm run build   # prisma generate + next build
+npm run start   # veya: preview_start (name: "safari-consulting")
+```
+Doğrulama tercihen tarayıcı MCP'si (Claude_Browser preview_start `name: safari-consulting`) ile. Build sırasında dev sunucusu Prisma DLL'ini kilitleyebilir → önce node süreçlerini kapat.
