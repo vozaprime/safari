@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function AdminRootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="tr" data-scroll-behavior="smooth" className={`${inter.variable} ${playfair.variable}`}>
       <body className="bg-ivory">{children}</body>
     </html>
   );
