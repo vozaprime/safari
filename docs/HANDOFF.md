@@ -11,7 +11,7 @@
 - **Canlı:** https://safari-consulting.vercel.app  ·  Panel: https://safari-consulting.vercel.app/admin
 
 ## 2. Teknoloji
-- **Next.js 15** (App Router, RSC, server actions) + **React 19** + **TypeScript** + **Tailwind CSS 4**
+- **Next.js 16** (App Router, RSC, server actions; Turbopack varsayılan build) + **React 19.2** + **TypeScript** + **Tailwind CSS 4**
 - **Prisma + PostgreSQL** (Prisma Postgres bulutu — hem yerel hem canlı AYNI DB'yi kullanır)
 - Kimlik: **jose** (JWT çerez) + **bcryptjs** + **2FA/TOTP** (`otpauth` + `qrcode`)
 - E-posta: **nodemailer** (SMTP, panelden ayarlanır; şifre AES-256-GCM ile şifreli saklanır)
@@ -43,6 +43,7 @@
 9. **Eksik/yarım özellikler tamamlandı:** ölü ayarlar siteye bağlandı (SEO/GA/logo/favicon/sosyal), iletişim formu spam koruması (honeypot + süre + IP limiti), sitemap.xml + robots.txt, **Blog modülü** (admin + public + nav), **medya kütüphanesi** (`/admin/media`).
 10. **2FA (TOTP) eklendi (2026-08-06):** `otpauth` + `qrcode`. Ayarlar'da kurulum (QR + tek seferlik yedek kodlar), girişte `/admin/2fa` challenge (TOTP veya yedek kod), Kullanıcılar sayfasında admin "2FA sıfırla" kurtarma. Şifreli secret (`crypto.ts` AES-GCM), sha256 hash'li yedek kodlar, kısa ömürlü `sc_2fa` pending çerezi. **Uçtan uca test edildi** (tek kullanımlık test hesabıyla; hesap+kayıtlar sonra temizlendi). Gerçek admin 2FA'sı KAPALI bırakıldı. **Canlıya deploy edildi (2026-08-06).**
 11. **Git deposu kuruldu (2026-08-06):** `git init` (main), ilk commit + 2FA commit'i. `.gitignore` sırları ve büyük medyayı (`*.m4a` vb.) hariç tutar. Not: proje uzak (remote) repoya bağlı DEĞİL.
+12. **Güvenlik yükseltmesi (2026-08-06):** `npm audit`'teki 4 high açık kapatıldı → **0 açık**. İki commit: **nodemailer 7→9.0.4** (+@types 6→8; SMTP/CRLF enjeksiyonu) ve **Next.js 15→16.3.0** (+ react/react-dom 19.1→19.2.8; Next'in 8 açığı + bağımlı savunmasız postcss & sharp). Next 15.x hattında yama yoktu; tek çözüm Next 16 majör yükseltmesiydi. Kod uyumluydu: `params`/`searchParams`/`cookies()`/`headers()` zaten async, `next/image` hiç kullanılmıyor. Tek bilinçli davranış koruması: `<html>`'e `data-scroll-behavior="smooth"` (Next 16 SPA gezinmede scroll-behavior'ı ezmiyor; Lenis ile birlikte eski "anında yukarı" davranışı korundu). Turbopack artık varsayılan build. Doğrulandı: build başarılı + 3 dilde (tr/en/ru) 13 rota HTTP 200 + middleware admin kapısı (`/`→`/tr`, `/admin`→`/admin/login`) + sunucu/konsol hatasız. **main'e merge edildi (fast-forward).** Bağlı Next 16 temizlikleri aynı gün yapıldı: (a) `middleware.ts` → **`proxy.ts`** (fonksiyon `proxy`; deprecation giderildi, runtime edge→nodejs; §7); (b) `next lint` → **ESLint flat config** (`eslint`+`eslint-config-next`+`eslint.config.mjs`, `"lint":"eslint"`). `npm run lint` çalışıyor ama mevcut kodda 12 error/3 warning react-hooks bulgusu var (yeni katı kurallar; `next build` lint çalıştırmadığı için deploy'u etkilemez — henüz DÜZELTİLMEDİ). **Canlıya deploy `npx vercel deploy --prod --yes` ile YAPILACAK** (DB şeması değişmedi; deploy öncesi iletişim formu maili + scrollytelling'i tarayıcıda gözden geçir).
 
 ## 7. ÖNEMLİ teknik notlar / tuzaklar
 - **CRLF hatası (çözüldü):** Tarayıcı formları uzun metni `\r\n` ile gönderir; `parseBlocks` ve server action'lar artık `\r\n?` → `\n` normalize eder. Yeni metin render bileşeni yazarken paylaşılan `parseBlocks` kullan.
@@ -50,7 +51,7 @@
 - **Blob store PUBLIC olmalı** (private store `access:"public"` ile hata verir). Yükleme yoksa Uploader "URL yapıştır" ile de çalışır.
 - **Aynı DB:** Yerel `npm run dev`/`start` ve canlı AYNI Postgres'i kullanır — yereldeki panel değişikliği canlıyı etkiler.
 - **In-app tarayıcı gezinme takıntısı:** `navigate` bazen ana sayfaya düşüyor; login için `form.requestSubmit()` veya JS ile submit daha güvenilir. Aynı quirk server-action redirect sonrası da URL'i stale gösterebilir — gerçek durumu doğrulamak için hedef sayfaya (`/admin`) elle git.
-- **2FA & middleware:** `src/middleware.ts` `/admin/*` altında geçerli `sc_session` ister. `/admin/2fa` challenge sayfası TAM oturum yokken çalıştığından `publicAdmin` istisnasındadır (kendi pending-`sc_2fa` çerez guard'ı var). Yeni bir oturum-öncesi admin rotası eklersen bu istisnaya da ekle.
+- **2FA & proxy (eski adıyla middleware):** `src/proxy.ts` (Next 16'da `middleware.ts`'ten yeniden adlandırıldı; export `proxy`, artık **nodejs** runtime) `/admin/*` altında geçerli `sc_session` ister. `/admin/2fa` challenge sayfası TAM oturum yokken çalıştığından `publicAdmin` istisnasındadır (kendi pending-`sc_2fa` çerez guard'ı var). Yeni bir oturum-öncesi admin rotası eklersen bu istisnaya da ekle. `config.matcher` aynı kaldı.
 
 ## 8. Bilinen açık / opsiyonel işler (yapılmadı)
 - Makale-içi görseller: Higgsfield günlük limiti nedeniyle bazı hizmet makalelerinde konuya en yakın MEVCUT görseller eşleştirildi; limit yenilenince birebir özel görseller üretilebilir.
