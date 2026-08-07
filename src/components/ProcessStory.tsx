@@ -30,6 +30,7 @@ export default function ProcessStory({
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- matchMedia yalnızca client'ta okunabilir; reduced-motion bayrağını mount'ta belirlemek meşru
       setReduced(true);
       return;
     }

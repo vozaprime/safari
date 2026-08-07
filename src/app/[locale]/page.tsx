@@ -17,11 +17,7 @@ import { altLanguages } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata(): Promise<Metadata> {
   return { alternates: altLanguages("") };
 }
 
@@ -107,14 +103,15 @@ export default async function HomePage({
   }
 
   const imageBySlug = new Map(services.map((s) => [s.slug, s.image]));
-  let counter = 0;
-  const indexGroups: IndexGroup[] = groups.map((group) => ({
+  const groupOffsets = groups.map((_, gi) =>
+    groups.slice(0, gi).reduce((sum, g) => sum + g.services.length, 0)
+  );
+  const indexGroups: IndexGroup[] = groups.map((group, gi) => ({
     label: group.title,
-    items: group.services.map((s) => {
+    items: group.services.map((s, si) => {
       const slug = s.href.split("/").pop() ?? "";
-      counter += 1;
       return {
-        num: counter,
+        num: groupOffsets[gi] + si + 1,
         title: s.title,
         summary: s.summary,
         href: s.href,

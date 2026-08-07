@@ -38,6 +38,7 @@ export default function Nav({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- gezinme (pathname) değişince mobil menüyü kapatan meşru reaktif effect
     setOpen(false);
   }, [pathname]);
 

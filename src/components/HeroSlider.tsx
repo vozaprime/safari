@@ -98,6 +98,7 @@ export default function HeroSlider({
                 preload={i === 0 ? "auto" : "metadata"}
               />
             ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- proje bilinçli olarak next/image yerine düz <img>/<video> kullanıyor (ArticleBody ile tutarlı)
               <img
                 src={s.media.src}
                 alt=""

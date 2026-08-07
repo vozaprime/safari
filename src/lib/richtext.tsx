@@ -58,7 +58,7 @@ export function ProseText({
   lead?: boolean;
 }) {
   const blocks = parseBlocks(text);
-  let firstPara = true;
+  const firstParaIdx = blocks.findIndex((b) => b.kind === "para");
   return (
     <div className={className}>
       {blocks.map((block, i) => {
@@ -88,8 +88,7 @@ export function ProseText({
             </ul>
           );
         }
-        const isLead = lead && firstPara;
-        firstPara = false;
+        const isLead = lead && i === firstParaIdx;
         return (
           <p key={i} className={`leading-relaxed ${isLead ? "mb-4 text-lg" : "mt-4 first:mt-0"}`}>
             {renderInline(block.text)}

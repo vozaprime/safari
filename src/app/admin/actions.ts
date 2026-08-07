@@ -368,7 +368,7 @@ export async function createServiceAction(formData: FormData) {
   const icon = String(formData.get("icon") ?? "finance");
   if (!title) redirect("/admin/services?toast=error");
 
-  let base = slugify(title) || "hizmet";
+  const base = slugify(title) || "hizmet";
   let slug = base;
   let n = 1;
   while (await prisma.service.findUnique({ where: { slug } })) slug = `${base}-${++n}`;
@@ -684,7 +684,7 @@ export async function createPostAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) redirect("/admin/posts?toast=error");
 
-  let base = slugify(title) || "yazi";
+  const base = slugify(title) || "yazi";
   let slug = base;
   let n = 1;
   while (await prisma.post.findUnique({ where: { slug } })) slug = `${base}-${++n}`;

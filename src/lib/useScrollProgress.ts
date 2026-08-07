@@ -21,7 +21,9 @@ export function useScrollStage<T extends HTMLElement>(
   const ref = useRef<T>(null);
   const [active, setActive] = useState(0);
   const frameCb = useRef(onFrame);
-  frameCb.current = onFrame;
+  useEffect(() => {
+    frameCb.current = onFrame;
+  });
 
   useEffect(() => {
     let raf = 0;

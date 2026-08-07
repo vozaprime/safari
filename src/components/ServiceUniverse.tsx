@@ -25,6 +25,7 @@ export default function ServiceUniverse({
   const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- matchMedia yalnızca client'ta okunabilir; reduced-motion bayrağını mount'ta belirlemek meşru
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) setReduced(true);
   }, []);
 

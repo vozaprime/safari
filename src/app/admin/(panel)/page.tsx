@@ -30,16 +30,16 @@ const entityLabels: Record<string, string> = {
 export default async function DashboardPage() {
   const session = await getVerifiedSession();
   const isAdmin = session?.role === "admin";
+  // eslint-disable-next-line react-hooks/purity -- Server Component: istek anındaki tarih (son 29 gün penceresi) bilinçli ve doğru
   const since = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000);
   since.setHours(0, 0, 0, 0);
 
-  const [messageCount, newCount, serviceCount, referenceCount, userCount, latest, recentMsgs, activity, byService] =
+  const [messageCount, newCount, serviceCount, referenceCount, latest, recentMsgs, activity, byService] =
     await Promise.all([
       prisma.contactMessage.count(),
       prisma.contactMessage.count({ where: { status: "new" } }),
       prisma.service.count(),
       prisma.reference.count(),
-      prisma.user.count(),
       prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
       prisma.contactMessage.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
       isAdmin ? prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 6 }) : Promise.resolve([]),

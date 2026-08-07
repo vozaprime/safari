@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Locale } from "@/lib/i18n";
 
 type Labels = {
@@ -29,7 +29,11 @@ export default function ContactForm({
   preselected?: string;
 }) {
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(0);
+
+  useEffect(() => {
+    startedAt.current = Date.now();
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

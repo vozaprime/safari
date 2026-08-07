@@ -40,6 +40,7 @@ export default function Toaster() {
       kind: found?.kind ?? (key === "error" ? "error" : "success"),
       text: msg ?? found?.text ?? "İşlem tamamlandı.",
     };
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- URL toast paramına tepki veren yan-etkili effect (ardından router.replace + timer)
     setToasts((t) => [...t, toast]);
 
     // strip the toast params from the URL without adding history

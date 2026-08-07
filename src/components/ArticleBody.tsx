@@ -17,7 +17,7 @@ export default function ArticleBody({
   const headingIdx = blocks.map((b, i) => (b.kind === "heading" ? i : -1)).filter((i) => i >= 0);
   const imageBefore = headingIdx.length >= 2 ? headingIdx[1] : -1;
 
-  let firstPara = true;
+  const firstParaIdx = blocks.findIndex((b) => b.kind === "para");
 
   return (
     <div>
@@ -66,8 +66,7 @@ export default function ArticleBody({
             </Reveal>
           );
         } else {
-          const dropCap = firstPara;
-          firstPara = false;
+          const dropCap = i === firstParaIdx;
           nodes.push(
             <Reveal key={i}>
               <p
