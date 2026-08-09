@@ -12,6 +12,13 @@ export function isLocale(value: string): value is Locale {
   return (locales as readonly string[]).includes(value);
 }
 
+/** Default per-locale site description (meta + OpenGraph fallback). */
+export const siteDescriptions: Record<Locale, string> = {
+  tr: "Finans, yatırım, uluslararası ticaret ve kurumsal danışmanlıkta stratejik çözüm ortağınız. Şirketlere, yatırımcılara ve girişimcilere özel, sonuç odaklı çözümler.",
+  en: "Your strategic solution partner in finance, investment, international trade and corporate advisory. Tailored, result-oriented solutions for companies, investors and entrepreneurs.",
+  ru: "Ваш стратегический партнёр в сфере финансов, инвестиций, международной торговли и корпоративного консалтинга. Индивидуальные решения для компаний, инвесторов и предпринимателей.",
+};
+
 const tr = {
   nav: {
     home: "Ana Sayfa",
@@ -90,6 +97,9 @@ const tr = {
     read_more: "Yazının devamı",
     back: "Tüm yazılar",
     empty: "Henüz yayınlanmış yazı bulunmuyor.",
+    related: "İlgili yazılar",
+    prev: "Önceki",
+    next: "Sonraki",
   },
   contact: {
     title: "İletişim",
@@ -195,6 +205,9 @@ const en: typeof tr = {
     read_more: "Read more",
     back: "All articles",
     empty: "No published articles yet.",
+    related: "Related articles",
+    prev: "Previous",
+    next: "Next",
   },
   contact: {
     title: "Contact",
@@ -300,6 +313,9 @@ const ru: typeof tr = {
     read_more: "Читать далее",
     back: "Все статьи",
     empty: "Пока нет опубликованных статей.",
+    related: "Похожие статьи",
+    prev: "Назад",
+    next: "Вперёд",
   },
   contact: {
     title: "Контакты",

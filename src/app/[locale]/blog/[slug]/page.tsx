@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import Reveal from "@/components/Reveal";
 import ArticleBody from "@/components/ArticleBody";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
-import { getPost, getPosts } from "@/lib/content";
-import { altLanguages } from "@/lib/seo";
+import { getPost, getPostLocales, getPosts } from "@/lib/content";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,16 @@ export async function generateMetadata({
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const post = await getPost(locale, slug);
   if (!post) return {};
-  return { title: post.title, description: post.excerpt, alternates: altLanguages(`/blog/${slug}`) };
+  const available = await getPostLocales(slug);
+  return pageMetadata({
+    locale,
+    path: `/blog/${slug}`,
+    title: post.title,
+    description: post.excerpt,
+    image: post.cover || undefined,
+    type: "article",
+    available,
+  });
 }
 
 const dateLocale: Record<string, string> = { tr: "tr-TR", en: "en-US", ru: "ru-RU" };
@@ -66,7 +75,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
       {others.length > 0 && (
         <section className="border-t border-sand bg-white">
           <div className="mx-auto max-w-6xl px-5 py-14">
-            <h2 className="font-display text-2xl text-forest">{t.blog.back}</h2>
+            <h2 className="font-display text-2xl text-forest">{t.blog.related}</h2>
             <div className="mt-6 grid gap-6 sm:grid-cols-3">
               {others.map((p) => (
                 <Link key={p.slug} href={`/${locale}/blog/${p.slug}`} className="group rounded-lg border border-sand p-5 transition-colors hover:border-gold/60">

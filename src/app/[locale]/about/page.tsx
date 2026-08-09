@@ -4,7 +4,7 @@ import PageHero from "@/components/PageHero";
 import { ProseText, renderInline } from "@/lib/richtext";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
 import { getPageContent } from "@/lib/content";
-import { altLanguages } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export async function generateMetadata({
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const t = getDict(locale);
-  return { title: t.about.title, alternates: altLanguages("/about") };
+  return pageMetadata({ locale, path: "/about", title: t.about.title, image: "/images/heroes/about.jpg" });
 }
 
 export default async function AboutPage({

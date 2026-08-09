@@ -4,17 +4,14 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/SmoothScroll";
-import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
+import { defaultLocale, getDict, isLocale, siteDescriptions, type Locale } from "@/lib/i18n";
 import { countPublishedPosts, getSettings } from "@/lib/content";
+import { DEFAULT_OG_IMAGE } from "@/lib/seo";
 import { inter, playfair } from "@/lib/fonts";
 
 export const dynamic = "force-dynamic";
 
-const descriptions: Record<Locale, string> = {
-  tr: "Finans, yatırım, uluslararası ticaret ve kurumsal danışmanlıkta stratejik çözüm ortağınız. Şirketlere, yatırımcılara ve girişimcilere özel, sonuç odaklı çözümler.",
-  en: "Your strategic solution partner in finance, investment, international trade and corporate advisory. Tailored, result-oriented solutions for companies, investors and entrepreneurs.",
-  ru: "Ваш стратегический партнёр в сфере финансов, инвестиций, международной торговли и корпоративного консалтинга. Индивидуальные решения для компаний, инвесторов и предпринимателей.",
-};
+const OG_LOCALE: Record<Locale, string> = { tr: "tr_TR", en: "en_US", ru: "ru_RU" };
 
 export async function generateMetadata({
   params,
@@ -25,7 +22,7 @@ export async function generateMetadata({
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const settings = await getSettings();
   const siteName = settings.seo_title || "SAFARI CONSULTING";
-  const description = settings.seo_description || descriptions[locale];
+  const description = settings.seo_description || siteDescriptions[locale];
 
   return {
     metadataBase: new URL(process.env.SITE_URL || "http://localhost:3000"),
@@ -37,7 +34,13 @@ export async function generateMetadata({
     icons: settings.site_favicon ? { icon: settings.site_favicon } : undefined,
     openGraph: {
       siteName,
-      locale,
+      type: "website",
+      locale: OG_LOCALE[locale],
+      description,
+      images: [DEFAULT_OG_IMAGE],
+    },
+    twitter: {
+      card: "summary_large_image",
       description,
     },
   };

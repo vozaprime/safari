@@ -4,7 +4,7 @@ import ServiceCard from "@/components/ServiceCard";
 import PageHero from "@/components/PageHero";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
 import { getServices } from "@/lib/content";
-import { altLanguages } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,13 @@ export async function generateMetadata({
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const t = getDict(locale);
-  return { title: t.services.title, alternates: altLanguages("/services") };
+  return pageMetadata({
+    locale,
+    path: "/services",
+    title: t.services.title,
+    description: t.services.subtitle,
+    image: "/images/heroes/services.jpg",
+  });
 }
 
 export default async function ServicesPage({

@@ -5,8 +5,8 @@ import Reveal from "@/components/Reveal";
 import ServiceIcon from "@/components/ServiceIcon";
 import ArticleBody from "@/components/ArticleBody";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
-import { getService, getServices } from "@/lib/content";
-import { altLanguages } from "@/lib/seo";
+import { getService, getServiceLocales, getServices } from "@/lib/content";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -36,11 +36,16 @@ export async function generateMetadata({
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const service = await getService(locale, slug);
   if (!service) return {};
-  return {
+  const available = await getServiceLocales(slug);
+  return pageMetadata({
+    locale,
+    path: `/services/${slug}`,
     title: service.title,
     description: service.summary,
-    alternates: altLanguages(`/services/${slug}`),
-  };
+    image: service.image,
+    type: "article",
+    available,
+  });
 }
 
 export default async function ServiceDetailPage({

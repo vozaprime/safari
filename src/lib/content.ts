@@ -1,5 +1,29 @@
 import { prisma } from "./db";
-import type { Locale } from "./i18n";
+import { locales, type Locale } from "./i18n";
+
+/** Locales in which a service has a non-empty translation (for hreflang). */
+export async function getServiceLocales(slug: string): Promise<Locale[]> {
+  const service = await prisma.service.findUnique({
+    where: { slug },
+    include: { translations: { select: { locale: true, title: true } } },
+  });
+  if (!service || !service.visible) return [];
+  return service.translations
+    .filter((t) => t.title.trim() !== "" && (locales as readonly string[]).includes(t.locale))
+    .map((t) => t.locale as Locale);
+}
+
+/** Locales in which a published post has a non-empty translation (for hreflang). */
+export async function getPostLocales(slug: string): Promise<Locale[]> {
+  const post = await prisma.post.findUnique({
+    where: { slug },
+    include: { translations: { select: { locale: true, title: true } } },
+  });
+  if (!post || !post.published) return [];
+  return post.translations
+    .filter((t) => t.title.trim() !== "" && (locales as readonly string[]).includes(t.locale))
+    .map((t) => t.locale as Locale);
+}
 
 export async function getPageContent(locale: Locale, keys?: string[]) {
   const rows = await prisma.pageContent.findMany({
@@ -90,6 +114,36 @@ export async function getPost(locale: Locale, slug: string) {
 
 export async function countPublishedPosts() {
   return prisma.post.count({ where: { published: true } });
+}
+
+export const POSTS_PER_PAGE = 9;
+
+/** Paginated published posts for a locale (DB-level skip/take + total count). */
+export async function getPublishedPostsPage(locale: Locale, page: number) {
+  const where = { published: true, translations: { some: { locale, title: { not: "" } } } };
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const [total, posts] = await Promise.all([
+    prisma.post.count({ where }),
+    prisma.post.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (safePage - 1) * POSTS_PER_PAGE,
+      take: POSTS_PER_PAGE,
+      include: { translations: { where: { locale } } },
+    }),
+  ]);
+  const items = posts
+    .filter((p) => p.translations.length > 0 && p.translations[0].title)
+    .map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      cover: p.cover,
+      published: p.published,
+      createdAt: p.createdAt,
+      title: p.translations[0].title,
+      excerpt: p.translations[0].excerpt,
+    }));
+  return { items, total, page: safePage, perPage: POSTS_PER_PAGE };
 }
 
 export async function getSettings() {

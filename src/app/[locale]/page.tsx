@@ -13,12 +13,18 @@ import ServiceUniverse, { type UniverseGroup } from "@/components/ServiceUnivers
 import { ProseText } from "@/lib/richtext";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
 import { getPageContent, getReferences, getServices } from "@/lib/content";
-import { altLanguages } from "@/lib/seo";
+import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return { alternates: altLanguages("") };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: raw } = await params;
+  const locale: Locale = isLocale(raw) ? raw : defaultLocale;
+  return pageMetadata({ locale, path: "" });
 }
 
 const CHAPTER_MEDIA: StoryStep["media"][] = [
