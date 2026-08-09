@@ -118,6 +118,9 @@ const tr = {
     address: "Adres",
     phone: "Telefon",
     email: "E-posta",
+    map_title: "Bizi haritada bulun",
+    directions: "Yol tarifi al",
+    follow_us: "Bizi takip edin",
   },
   footer: {
     tagline: "Finans, yatırım, uluslararası ticaret ve kurumsal danışmanlıkta stratejik çözüm ortağınız.",
@@ -226,6 +229,9 @@ const en: typeof tr = {
     address: "Address",
     phone: "Phone",
     email: "Email",
+    map_title: "Find us on the map",
+    directions: "Get directions",
+    follow_us: "Follow us",
   },
   footer: {
     tagline: "Your strategic solution partner in finance, investment, international trade and corporate advisory.",
@@ -334,6 +340,9 @@ const ru: typeof tr = {
     address: "Адрес",
     phone: "Телефон",
     email: "Эл. почта",
+    map_title: "Найдите нас на карте",
+    directions: "Построить маршрут",
+    follow_us: "Мы в соцсетях",
   },
   footer: {
     tagline: "Ваш стратегический партнёр в сфере финансов, инвестиций, международной торговли и корпоративного консалтинга.",

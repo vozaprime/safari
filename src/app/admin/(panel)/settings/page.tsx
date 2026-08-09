@@ -55,13 +55,30 @@ export default async function SettingsPage() {
               <Field label="Adres" htmlFor="contact_address">
                 <input id="contact_address" name="contact_address" defaultValue={s.contact_address ?? ""} className={inputClass} />
               </Field>
-              <Field label="LinkedIn" htmlFor="linkedin_url">
-                <input id="linkedin_url" name="linkedin_url" defaultValue={s.linkedin_url ?? ""} className={inputClass} />
-              </Field>
-              <Field label="Instagram" htmlFor="instagram_url">
-                <input id="instagram_url" name="instagram_url" defaultValue={s.instagram_url ?? ""} className={inputClass} />
-              </Field>
             </div>
+          </div>
+        </AdminCard>
+
+        <AdminCard title="Sosyal Medya" description="Doldurulan platformlar iletişim sayfasında ve alt bilgide ikon olarak gösterilir. Boş bırakılanlar gizlenir.">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Field label="LinkedIn" htmlFor="linkedin_url">
+              <input id="linkedin_url" name="linkedin_url" defaultValue={s.linkedin_url ?? ""} placeholder="https://linkedin.com/company/..." className={inputClass} />
+            </Field>
+            <Field label="Instagram" htmlFor="instagram_url">
+              <input id="instagram_url" name="instagram_url" defaultValue={s.instagram_url ?? ""} placeholder="https://instagram.com/..." className={inputClass} />
+            </Field>
+            <Field label="X (Twitter)" htmlFor="twitter_url">
+              <input id="twitter_url" name="twitter_url" defaultValue={s.twitter_url ?? ""} placeholder="https://x.com/..." className={inputClass} />
+            </Field>
+            <Field label="Facebook" htmlFor="facebook_url">
+              <input id="facebook_url" name="facebook_url" defaultValue={s.facebook_url ?? ""} placeholder="https://facebook.com/..." className={inputClass} />
+            </Field>
+            <Field label="YouTube" htmlFor="youtube_url">
+              <input id="youtube_url" name="youtube_url" defaultValue={s.youtube_url ?? ""} placeholder="https://youtube.com/@..." className={inputClass} />
+            </Field>
+            <Field label="WhatsApp" htmlFor="whatsapp_url" hint="(tam bağlantı, örn. https://wa.me/90...)">
+              <input id="whatsapp_url" name="whatsapp_url" defaultValue={s.whatsapp_url ?? ""} placeholder="https://wa.me/90..." className={inputClass} />
+            </Field>
           </div>
         </AdminCard>
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import SocialLinks from "./SocialLinks";
 import type { Locale } from "@/lib/i18n";
 import { getDict } from "@/lib/i18n";
 
@@ -26,38 +27,7 @@ export default function Footer({
         <div>
           <Logo src={settings.site_logo || undefined} />
           <p className="mt-5 max-w-xs text-sm leading-relaxed text-mist">{t.footer.tagline}</p>
-          {(settings.linkedin_url || settings.instagram_url) && (
-            <div className="mt-5 flex items-center gap-3">
-              {settings.linkedin_url && (
-                <a
-                  href={settings.linkedin_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="LinkedIn"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-emerald-line text-ivory/80 transition-colors hover:border-gold hover:text-gold"
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-                    <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3zM10 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V21h-4v-5.4c0-1.3-.02-2.95-1.8-2.95-1.8 0-2.07 1.4-2.07 2.85V21h-4z" />
-                  </svg>
-                </a>
-              )}
-              {settings.instagram_url && (
-                <a
-                  href={settings.instagram_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Instagram"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-emerald-line text-ivory/80 transition-colors hover:border-gold hover:text-gold"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="h-4 w-4" aria-hidden="true">
-                    <rect x="3" y="3" width="18" height="18" rx="5" />
-                    <circle cx="12" cy="12" r="4" />
-                    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-                  </svg>
-                </a>
-              )}
-            </div>
-          )}
+          <SocialLinks settings={settings} className="mt-5" />
         </div>
         <div>
           <h3 className="text-xs font-medium uppercase tracking-[0.25em] text-gold">

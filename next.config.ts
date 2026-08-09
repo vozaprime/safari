@@ -21,6 +21,7 @@ const contentSecurityPolicy = [
   "media-src 'self' blob: https:",
   "font-src 'self' data:",
   "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com",
+  "frame-src 'self' https://www.google.com https://maps.google.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
