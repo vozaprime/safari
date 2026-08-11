@@ -5,7 +5,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/SmoothScroll";
 import { defaultLocale, getDict, isLocale, siteDescriptions, type Locale } from "@/lib/i18n";
-import { countPublishedPosts, getSettings } from "@/lib/content";
+import { countPublishedPosts, getServices, getSettings } from "@/lib/content";
 import { DEFAULT_OG_IMAGE } from "@/lib/seo";
 import { inter, playfair } from "@/lib/fonts";
 
@@ -57,7 +57,11 @@ export default async function LocaleLayout({
   if (!isLocale(raw)) redirect(`/${defaultLocale}`);
   const locale = raw as Locale;
   const t = getDict(locale);
-  const [settings, blogCount] = await Promise.all([getSettings(), countPublishedPosts()]);
+  const [settings, blogCount, services] = await Promise.all([
+    getSettings(),
+    countPublishedPosts(),
+    getServices(locale),
+  ]);
 
   const gaId = settings.ga_id?.trim();
 
@@ -70,6 +74,7 @@ export default async function LocaleLayout({
           labels={t.nav}
           logo={settings.site_logo}
           logoHeight={Number(settings.logo_height) || undefined}
+          services={services.map((s) => ({ slug: s.slug, title: s.title }))}
           showBlog={blogCount > 0}
         />
         <main className="pt-[72px]">{children}</main>
