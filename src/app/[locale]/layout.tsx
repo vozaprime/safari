@@ -65,7 +65,13 @@ export default async function LocaleLayout({
     <html lang={locale} data-scroll-behavior="smooth" className={`${inter.variable} ${playfair.variable}`}>
       <body>
         <SmoothScroll />
-        <Nav locale={locale} labels={t.nav} logo={settings.site_logo} showBlog={blogCount > 0} />
+        <Nav
+          locale={locale}
+          labels={t.nav}
+          logo={settings.site_logo}
+          logoHeight={Number(settings.logo_height) || undefined}
+          showBlog={blogCount > 0}
+        />
         <main className="pt-[72px]">{children}</main>
         <Footer locale={locale} settings={settings} />
         {gaId && (

@@ -537,6 +537,7 @@ export async function updateSettingsAction(formData: FormData) {
     "whatsapp_url",
     "site_logo",
     "site_favicon",
+    "logo_height",
     "seo_title",
     "seo_description",
     "ga_id",

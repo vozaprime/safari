@@ -94,6 +94,9 @@ export default async function SettingsPage() {
             </div>
           </div>
           <div className="mt-4 space-y-4">
+            <Field label="Logo yüksekliği (px)" htmlFor="logo_height" hint="(varsayılan 48 · 28–64 arası)">
+              <input id="logo_height" name="logo_height" type="number" min={28} max={64} step={1} defaultValue={s.logo_height ?? "48"} className={inputClass} />
+            </Field>
             <Field label="SEO başlığı" htmlFor="seo_title">
               <input id="seo_title" name="seo_title" defaultValue={s.seo_title ?? ""} placeholder="SAFARI CONSULTING" className={inputClass} />
             </Field>

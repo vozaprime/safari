@@ -19,11 +19,13 @@ export default function Nav({
   locale,
   labels,
   logo,
+  logoHeight,
   showBlog,
 }: {
   locale: Locale;
   labels: NavLabels;
   logo?: string;
+  logoHeight?: number;
   showBlog?: boolean;
 }) {
   const pathname = usePathname();
@@ -70,7 +72,7 @@ export default function Nav({
     >
       <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-5">
         <Link href={`/${locale}`} aria-label="SAFARI CONSULTING">
-          <Logo src={logo || undefined} />
+          <Logo src={logo || undefined} height={logoHeight} />
         </Link>
 
         <nav className="hidden items-center gap-7 lg:flex" aria-label="Main">

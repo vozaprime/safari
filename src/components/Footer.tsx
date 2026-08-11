@@ -25,7 +25,7 @@ export default function Footer({
     <footer className="bg-forest-deep text-ivory">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-3">
         <div>
-          <Logo src={settings.site_logo || undefined} />
+          <Logo src={settings.site_logo || undefined} height={Number(settings.logo_height) || undefined} />
           <p className="mt-5 max-w-xs text-sm leading-relaxed text-mist">{t.footer.tagline}</p>
           <SocialLinks settings={settings} className="mt-5" />
         </div>
