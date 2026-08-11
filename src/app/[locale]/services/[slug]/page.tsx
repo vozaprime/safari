@@ -97,72 +97,70 @@ export default async function ServiceDetailPage({
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-16 md:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1.7fr_1fr]">
-          <div>
-            <ArticleBody
-              description={service.description}
-              inlineImage={inlineImages[service.slug]}
-              inlineAlt={service.title}
-            />
+      <section className="mx-auto max-w-3xl px-5 py-16 md:py-20">
+        <ArticleBody
+          description={service.description}
+          inlineImage={inlineImages[service.slug]}
+          inlineAlt={service.title}
+        />
 
-            {service.scope.length > 0 && (
-              <Reveal delay={1}>
-                <h2 className="font-display mt-14 flex items-center gap-3 text-2xl text-forest">
-                  <span className="h-px w-8 bg-gold" aria-hidden="true" />
-                  {t.services.scope_title}
-                </h2>
-                <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {service.scope.map((item) => (
-                    <li key={item} className="flex items-start gap-3 rounded-md border border-sand bg-white px-4 py-3">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="mt-0.5 h-4 w-4 shrink-0 text-gold-dark" aria-hidden="true">
-                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <span className="text-sm text-ink">{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-            )}
+        {service.scope.length > 0 && (
+          <Reveal delay={1}>
+            <h2 className="font-display mt-16 flex items-center gap-3 text-2xl text-forest">
+              <span className="h-px w-8 bg-gold" aria-hidden="true" />
+              {t.services.scope_title}
+            </h2>
+            <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+              {service.scope.map((item) => (
+                <li key={item} className="flex items-start gap-3 rounded-md border border-sand bg-white px-4 py-3">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="mt-0.5 h-4 w-4 shrink-0 text-gold-dark" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-sm text-ink">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        )}
 
-            <Reveal delay={2}>
-              <div className="mt-12 rounded-lg bg-forest p-8 text-ivory">
-                <h2 className="font-display text-2xl">{t.services.detail_cta_title}</h2>
-                <p className="mt-2 text-sm text-ivory/70">{t.services.detail_cta_text}</p>
-                <Link
-                  href={`/${locale}/contact?service=${service.slug}`}
-                  className="mt-6 inline-block rounded-md bg-gold px-7 py-3.5 text-sm font-medium text-gold-ink transition-colors hover:bg-gold-dark hover:text-ivory"
-                >
-                  {t.services.detail_cta_button}
-                </Link>
-              </div>
-            </Reveal>
+        <Reveal delay={2}>
+          <div className="mt-14 overflow-hidden rounded-xl bg-forest p-8 text-ivory md:p-10">
+            <h2 className="font-display text-2xl">{t.services.detail_cta_title}</h2>
+            <p className="mt-2 max-w-xl text-sm text-ivory/70">{t.services.detail_cta_text}</p>
+            <Link
+              href={`/${locale}/contact?service=${service.slug}`}
+              className="mt-6 inline-block rounded-md bg-gold px-7 py-3.5 text-sm font-medium text-gold-ink transition-colors hover:bg-gold-dark hover:text-ivory"
+            >
+              {t.services.detail_cta_button}
+            </Link>
           </div>
-
-          <aside>
-            <Reveal delay={1}>
-              <h2 className="text-xs font-medium uppercase tracking-[0.25em] text-gold-dark">
-                {t.services.other_services}
-              </h2>
-              <ul className="mt-5 space-y-3">
-                {others.map((other) => (
-                  <li key={other.slug}>
-                    <Link
-                      href={`/${locale}/services/${other.slug}`}
-                      className="group flex items-center gap-4 rounded-lg border border-sand bg-white p-4 transition-colors hover:border-gold/60"
-                    >
-                      <span className="text-forest group-hover:text-gold-dark">
-                        <ServiceIcon icon={other.icon} className="h-6 w-6" />
-                      </span>
-                      <span className="text-sm font-medium text-ink">{other.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          </aside>
-        </div>
+        </Reveal>
       </section>
+
+      {others.length > 0 && (
+        <section className="border-t border-sand bg-ivory/50">
+          <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
+            <h2 className="font-display flex items-center gap-3 text-2xl text-forest">
+              <span className="h-px w-8 bg-gold" aria-hidden="true" />
+              {t.services.other_services}
+            </h2>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {others.map((other) => (
+                <Link
+                  key={other.slug}
+                  href={`/${locale}/services/${other.slug}`}
+                  className="group flex items-center gap-3 rounded-lg border border-sand bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-gold/60 hover:shadow-lg hover:shadow-forest/10"
+                >
+                  <span className="shrink-0 text-forest transition-colors group-hover:text-gold-dark">
+                    <ServiceIcon icon={other.icon} className="h-6 w-6" />
+                  </span>
+                  <span className="text-sm font-medium leading-snug text-ink">{other.title}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </>
   );
 }
