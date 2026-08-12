@@ -1,6 +1,7 @@
 import { PageHeader, EmptyState } from "@/components/admin/ui";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import AdminIcon from "@/components/admin/icons";
+import MediaUploader from "@/components/admin/MediaUploader";
 import { deleteMediaAction } from "../../actions";
 import { listMedia } from "@/lib/media";
 
@@ -13,6 +14,8 @@ export default async function MediaPage() {
   return (
     <div>
       <PageHeader title="Medya Kütüphanesi" description="Panelden yüklenen görsel ve videolar. Kullanılmayanları buradan silebilirsiniz." />
+
+      <MediaUploader />
 
       {items.length === 0 ? (
         <EmptyState text="Henüz yüklenmiş medya yok. Hizmet, referans veya blog görsellerini yüklediğinizde burada listelenir." />
