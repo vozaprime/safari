@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import AdminIcon from "./icons";
+import MediaPicker from "./MediaPicker";
 
 export default function Uploader({
   name,
@@ -19,6 +20,7 @@ export default function Uploader({
   const [value, setValue] = useState(defaultValue);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isVideo = accept.includes("video") || /\.(mp4|webm|mov)$/i.test(value);
 
@@ -48,9 +50,7 @@ export default function Uploader({
     <div>
       <input type="hidden" name={name} value={value} />
       <div className="flex items-start gap-4">
-        <div
-          className={`relative ${aspect} w-40 shrink-0 overflow-hidden rounded-lg border border-sand bg-ivory`}
-        >
+        <div className={`relative ${aspect} w-40 shrink-0 overflow-hidden rounded-lg border border-sand bg-ivory`}>
           {value ? (
             isVideo ? (
               <video src={value} className="h-full w-full object-cover" muted loop playsInline autoPlay />
@@ -74,23 +74,28 @@ export default function Uploader({
         </div>
 
         <div className="flex-1">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-md border border-sand px-3.5 py-2 text-xs font-medium text-forest transition-colors hover:border-gold/60"
-          >
-            <AdminIcon name="download" className="h-4 w-4" />
-            {value ? `${label} değiştir` : `${label} yükle`}
-          </button>
-          {value && (
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => setValue("")}
-              className="ml-2 text-xs text-red-500 hover:underline"
+              onClick={() => inputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-md border border-sand px-3.5 py-2 text-xs font-medium text-forest transition-colors hover:border-gold/60"
             >
-              Kaldır
+              <AdminIcon name="download" className="h-4 w-4" />
+              {value ? `${label} değiştir` : `${label} yükle`}
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-sand px-3.5 py-2 text-xs font-medium text-forest transition-colors hover:border-gold/60"
+            >
+              <AdminIcon name="grid" className="h-4 w-4" /> Kütüphaneden seç
+            </button>
+            {value && (
+              <button type="button" onClick={() => setValue("")} className="text-xs text-red-500 hover:underline">
+                Kaldır
+              </button>
+            )}
+          </div>
           <input
             ref={inputRef}
             type="file"
@@ -103,9 +108,7 @@ export default function Uploader({
           />
           {value && <p className="mt-2 break-all text-[11px] text-stone/70">{value}</p>}
           {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
-          <p className="mt-2 text-[11px] text-stone/60">
-            Veya doğrudan bir URL yapıştırabilirsiniz:
-          </p>
+          <p className="mt-2 text-[11px] text-stone/60">Veya doğrudan bir URL yapıştırabilirsiniz:</p>
           <input
             type="text"
             value={value}
@@ -115,6 +118,13 @@ export default function Uploader({
           />
         </div>
       </div>
+
+      <MediaPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(url) => setValue(url)}
+        accept={accept}
+      />
     </div>
   );
 }
