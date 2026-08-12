@@ -4,7 +4,11 @@ export type RichBlock =
   | { kind: "heading"; text: string }
   | { kind: "quote"; text: string }
   | { kind: "list"; items: string[] }
+  | { kind: "image"; src: string; alt: string }
   | { kind: "para"; text: string };
+
+/** A standalone image line: ![alt](url) as its own paragraph. */
+const IMAGE_RE = /^!\[([^\]]*)\]\(([^)\s]+)\)$/;
 
 /** Convert inline **bold** and *italic* markers into React nodes. */
 export function renderInline(text: string): React.ReactNode[] {
@@ -32,6 +36,8 @@ export function parseBlocks(text: string): RichBlock[] {
     .filter(Boolean)
     .map<RichBlock>((block) => {
       if (block.startsWith("## ")) return { kind: "heading", text: block.slice(3).trim() };
+      const img = block.match(IMAGE_RE);
+      if (img) return { kind: "image", src: img[2], alt: img[1].trim() };
       const lines = block.split("\n");
       if (lines.every((l) => l.trim().startsWith("> "))) {
         return { kind: "quote", text: lines.map((l) => l.trim().slice(2)).join(" ").trim() };
@@ -62,6 +68,17 @@ export function ProseText({
   return (
     <div className={className}>
       {blocks.map((block, i) => {
+        if (block.kind === "image") {
+          return (
+            <figure key={i} className="my-6 overflow-hidden rounded-lg border border-sand">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={block.src} alt={block.alt} className="w-full" />
+              {block.alt && (
+                <figcaption className="bg-ivory/50 px-3 py-2 text-xs text-stone/80">{block.alt}</figcaption>
+              )}
+            </figure>
+          );
+        }
         if (block.kind === "heading") {
           return (
             <h3 key={i} className="font-display mt-8 text-xl font-medium first:mt-0">
