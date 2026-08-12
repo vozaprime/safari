@@ -12,10 +12,14 @@ export default function ArticleBody({
 }) {
   const blocks = parseBlocks(description);
 
-  // Insert the inline image just before the 2nd heading, so it breaks the
-  // article roughly a third of the way down rather than at the very top.
+  // If the body itself carries image blocks, the author is placing images
+  // explicitly — the legacy single mid-article image is suppressed.
+  const hasInlineImages = blocks.some((b) => b.kind === "image");
+
+  // Legacy fallback: insert the hardcoded mid-article image just before the
+  // 2nd heading, only when the body has no image blocks of its own.
   const headingIdx = blocks.map((b, i) => (b.kind === "heading" ? i : -1)).filter((i) => i >= 0);
-  const imageBefore = headingIdx.length >= 2 ? headingIdx[1] : -1;
+  const legacyImageBefore = !hasInlineImages && inlineImage && headingIdx.length >= 2 ? headingIdx[1] : -1;
 
   const firstParaIdx = blocks.findIndex((b) => b.kind === "para");
 
@@ -24,9 +28,9 @@ export default function ArticleBody({
       {blocks.map((block, i) => {
         const nodes: React.ReactNode[] = [];
 
-        if (i === imageBefore && inlineImage) {
+        if (i === legacyImageBefore && inlineImage) {
           nodes.push(
-            <Reveal key={`img-${i}`}>
+            <Reveal key={`legacy-img-${i}`}>
               <figure className="my-10 overflow-hidden rounded-xl border border-sand">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={inlineImage} alt={inlineAlt ?? ""} className="aspect-[3/2] w-full object-cover" />
@@ -35,7 +39,19 @@ export default function ArticleBody({
           );
         }
 
-        if (block.kind === "heading") {
+        if (block.kind === "image") {
+          nodes.push(
+            <Reveal key={i}>
+              <figure className="my-10 overflow-hidden rounded-xl border border-sand">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={block.src} alt={block.alt} className="w-full" />
+                {block.alt && (
+                  <figcaption className="bg-ivory/60 px-4 py-2.5 text-xs text-stone">{block.alt}</figcaption>
+                )}
+              </figure>
+            </Reveal>
+          );
+        } else if (block.kind === "heading") {
           nodes.push(
             <Reveal key={i}>
               <h2 className="font-display mt-12 flex items-center gap-3 text-2xl text-forest md:text-[26px]">
