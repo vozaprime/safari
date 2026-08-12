@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import AdminIcon from "./icons";
 
 type Status = "pending" | "uploading" | "done" | "error";
-type Job = { name: string; status: Status };
+type Job = { name: string; status: Status; error?: string };
+
+// Maps the upload API's error codes (api/admin/upload) to Turkish messages.
+const ERROR_MESSAGES: Record<string, string> = {
+  too_large: "Dosya çok büyük (görsel ≤ 8 MB, video ≤ 50 MB)",
+  bad_type: "Desteklenmeyen dosya türü",
+  no_file: "Dosya okunamadı",
+  unauthorized: "Oturum sonlanmış — yeniden giriş yapın",
+};
 
 export default function MediaUploader() {
   const router = useRouter();
@@ -19,10 +27,14 @@ export default function MediaUploader() {
       const body = new FormData();
       body.append("file", file);
       const res = await fetch("/api/admin/upload", { method: "POST", body });
-      if (!res.ok) throw new Error("upload_failed");
+      if (!res.ok) {
+        const code = await res.json().then((d) => d?.error).catch(() => null);
+        throw new Error(ERROR_MESSAGES[code as string] ?? "Yükleme başarısız");
+      }
       setJobs((j) => j.map((x, i) => (i === idx ? { ...x, status: "done" } : x)));
-    } catch {
-      setJobs((j) => j.map((x, i) => (i === idx ? { ...x, status: "error" } : x)));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Yükleme başarısız";
+      setJobs((j) => j.map((x, i) => (i === idx ? { ...x, status: "error", error: message } : x)));
     }
   }
 
@@ -38,11 +50,15 @@ export default function MediaUploader() {
   return (
     <div className="mb-6">
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Dosya yükle: buraya sürükleyin ya da seçmek için tıklayın"
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
         onClick={() => inputRef.current?.click()}
-        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors ${
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); } }}
+        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors focus:outline-none focus-visible:border-gold focus-visible:ring-2 focus-visible:ring-gold/30 ${
           dragOver ? "border-gold bg-gold/5" : "border-sand bg-white hover:border-gold/50"
         }`}
       >
@@ -61,21 +77,21 @@ export default function MediaUploader() {
       {jobs.length > 0 && (
         <ul className="mt-3 space-y-1.5">
           {jobs.map((j, i) => (
-            <li key={`${j.name}-${i}`} className="flex items-center justify-between rounded-md border border-sand bg-white px-3 py-1.5 text-xs">
+            <li key={`${j.name}-${i}`} className="flex items-center justify-between gap-3 rounded-md border border-sand bg-white px-3 py-1.5 text-xs">
               <span className="truncate text-ink">{j.name}</span>
               <span
-                className={
+                className={`shrink-0 ${
                   j.status === "done"
                     ? "text-emerald"
                     : j.status === "error"
                     ? "text-red-600"
                     : "text-stone"
-                }
+                }`}
               >
                 {j.status === "done"
                   ? "Yüklendi"
                   : j.status === "error"
-                  ? "Hata"
+                  ? j.error ?? "Hata"
                   : j.status === "uploading"
                   ? "Yükleniyor…"
                   : "Bekliyor"}

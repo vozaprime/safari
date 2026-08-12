@@ -81,8 +81,14 @@ export default function RichTextEditor({
   };
 
   const insertImage = (url: string) => {
-    const alt =
-      url.split("/").pop()?.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() ?? "";
+    const base = url.split("/").pop()?.replace(/\.[^.]+$/, "") ?? "";
+    // Uploaded filenames get a random "-<stamp>" suffix (see api/admin/upload).
+    // Strip that trailing token (6+ base36 chars containing a digit) from the
+    // auto-generated alt so it reads cleanly; plain-word names are left intact.
+    const alt = base
+      .replace(/-(?=[a-z0-9]*[0-9])[a-z0-9]{6,}$/i, "")
+      .replace(/[-_]+/g, " ")
+      .trim();
     insertAtCursor(`\n\n![${alt}](${url})\n\n`);
   };
 
