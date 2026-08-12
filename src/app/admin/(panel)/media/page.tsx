@@ -2,38 +2,7 @@ import { PageHeader, EmptyState } from "@/components/admin/ui";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import AdminIcon from "@/components/admin/icons";
 import { deleteMediaAction } from "../../actions";
-
-type Item = { url: string; name: string; size: number; date?: Date };
-
-async function listMedia(): Promise<Item[]> {
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    try {
-      const { list } = await import("@vercel/blob");
-      const { blobs } = await list({ prefix: "uploads/", limit: 200 });
-      return blobs
-        .map((b) => ({ url: b.url, name: b.pathname.split("/").pop() ?? b.pathname, size: b.size, date: b.uploadedAt }))
-        .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
-    } catch {
-      return [];
-    }
-  }
-  // local dev fallback
-  try {
-    const { readdir, stat } = await import("fs/promises");
-    const path = await import("path");
-    const dir = path.join(process.cwd(), "public", "uploads");
-    const files = await readdir(dir).catch(() => [] as string[]);
-    const items: Item[] = [];
-    for (const f of files) {
-      if (f.startsWith(".")) continue;
-      const s = await stat(path.join(dir, f));
-      items.push({ url: `/uploads/${f}`, name: f, size: s.size, date: s.mtime });
-    }
-    return items.sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
-  } catch {
-    return [];
-  }
-}
+import { listMedia } from "@/lib/media";
 
 const isVideo = (u: string) => /\.(mp4|webm|mov)$/i.test(u);
 const kb = (n: number) => (n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.round(n / 1024)} KB`);
