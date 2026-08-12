@@ -8,7 +8,7 @@
 
 - Proje kökü: `D:\PROJELER\SAFARI CONSULTING`
 - Platform: Windows, PowerShell + Git Bash. Node v24, npm.
-- **Canlı:** https://safari-consulting.vercel.app  ·  Panel: https://safari-consulting.vercel.app/admin
+- **Canlı (özel alan adı):** https://www.safarict.com  ·  Panel: https://www.safarict.com/admin  (Vercel URL'i de çalışır: safari-consulting.vercel.app)
 
 ## 2. Teknoloji
 - **Next.js 16** (App Router, RSC, server actions; Turbopack varsayılan build) + **React 19.2** + **TypeScript** + **Tailwind CSS 4**
