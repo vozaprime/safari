@@ -17,3 +17,6 @@ public/uploads/*
 *.mp4
 *.mov
 *.wav
+
+# TypeScript incremental build cache
+*.tsbuildinfo
