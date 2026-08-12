@@ -7,7 +7,7 @@ import RichTextEditor from "./RichTextEditor";
 type FieldDef = { key: string; label: string; rows: number; kind?: "text" | "json" | "rich"; hint?: string };
 type Group = { title: string; keys: FieldDef[] };
 
-const richHint = 'Kalın · italik · ara başlık · alıntı · liste araç çubuğunu kullanabilirsiniz.';
+const richHint = 'Kalın · italik · ara başlık · alıntı · liste · görsel araç çubuğunu kullanabilirsiniz.';
 
 const groups: Group[] = [
   {

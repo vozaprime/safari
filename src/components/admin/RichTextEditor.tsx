@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import AdminIcon from "./icons";
+import MediaPicker from "./MediaPicker";
 import { ProseText } from "@/lib/richtext";
 
 type Tool = { key: string; label: string; icon?: string; title: string };
@@ -27,6 +28,7 @@ export default function RichTextEditor({
 }) {
   const [value, setValue] = useState(defaultValue ?? "");
   const [preview, setPreview] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
 
   const surround = (before: string, after: string, placeholder: string) => {
@@ -60,6 +62,30 @@ export default function RichTextEditor({
     requestAnimationFrame(() => ta.focus());
   };
 
+  const insertAtCursor = (snippet: string) => {
+    const ta = ref.current;
+    if (!ta) {
+      setValue((v) => v + snippet);
+      return;
+    }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const next = value.slice(0, start) + snippet + value.slice(end);
+    setValue(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + snippet.length;
+      ta.selectionStart = pos;
+      ta.selectionEnd = pos;
+    });
+  };
+
+  const insertImage = (url: string) => {
+    const alt =
+      url.split("/").pop()?.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() ?? "";
+    insertAtCursor(`\n\n![${alt}](${url})\n\n`);
+  };
+
   const apply = (key: string) => {
     switch (key) {
       case "bold":
@@ -91,6 +117,15 @@ export default function RichTextEditor({
             {t.label}
           </button>
         ))}
+        <span className="mx-1 h-4 w-px bg-sand" aria-hidden="true" />
+        <button
+          type="button"
+          title="Görsel ekle"
+          onClick={() => setPickerOpen(true)}
+          className="grid h-7 w-7 place-items-center rounded text-stone transition-colors hover:bg-white hover:text-forest"
+        >
+          <AdminIcon name="image" className="h-4 w-4" />
+        </button>
         <span className="ml-auto">
           <button
             type="button"
@@ -115,6 +150,8 @@ export default function RichTextEditor({
       )}
 
       {hint && <p className="border-t border-sand bg-ivory/40 px-3 py-1.5 text-[11px] text-stone/70">{hint}</p>}
+
+      <MediaPicker open={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={insertImage} accept="image/*" />
     </div>
   );
 }

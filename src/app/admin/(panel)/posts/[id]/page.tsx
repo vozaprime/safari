@@ -66,7 +66,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
                     name={`${locale}_body`}
                     defaultValue={t?.body ?? ""}
                     rows={14}
-                    hint="Araç çubuğu: kalın · italik · ara başlık · alıntı · liste. Boş satır yeni paragraf açar."
+                    hint="Araç çubuğu: kalın · italik · ara başlık · alıntı · liste · görsel. Boş satır yeni paragraf açar."
                   />
                 </Field>
               </div>

@@ -83,7 +83,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
                     name={`${locale}_description`}
                     defaultValue={tr?.description ?? ""}
                     rows={14}
-                    hint="Araç çubuğu: kalın · italik · ara başlık · alıntı · liste. Boş satır yeni paragraf açar."
+                    hint="Araç çubuğu: kalın · italik · ara başlık · alıntı · liste · görsel. Boş satır yeni paragraf açar."
                   />
                 </Field>
                 <Field label="Hizmet kapsamı (her satır bir madde)" htmlFor={`${locale}_scope`}>
