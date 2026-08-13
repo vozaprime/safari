@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Reveal from "@/components/Reveal";
-import ArticleBody from "@/components/ArticleBody";
+import EditorialArticleBody from "@/components/EditorialArticleBody";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
 import { getPost, getPostLocales, getPosts } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
@@ -69,7 +69,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
       </section>
 
       <article className="mx-auto max-w-3xl px-5 py-14 md:py-16">
-        <ArticleBody description={post.body} />
+        <EditorialArticleBody description={post.body} />
       </article>
 
       {others.length > 0 && (

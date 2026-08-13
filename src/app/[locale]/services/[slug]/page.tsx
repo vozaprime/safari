@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Reveal from "@/components/Reveal";
 import ServiceIcon from "@/components/ServiceIcon";
-import ServiceArticleBody from "@/components/ServiceArticleBody";
+import EditorialArticleBody from "@/components/EditorialArticleBody";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
 import { getService, getServiceLocales, getServices } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
@@ -80,7 +80,7 @@ export default async function ServiceDetailPage({
       {/* Article — editorial redesign */}
       <article className="bg-ivory">
         <div className="mx-auto max-w-3xl px-5 py-16 md:py-20">
-          <ServiceArticleBody description={service.description} />
+          <EditorialArticleBody description={service.description} />
 
           {/* Scope */}
           {service.scope.length > 0 && (

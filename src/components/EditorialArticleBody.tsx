@@ -2,12 +2,12 @@ import Reveal from "./Reveal";
 import { parseBlocks, renderInline } from "@/lib/richtext";
 
 /**
- * Editorial renderer for service articles: `##` headings become numbered
- * sections (01/02…), `>` quotes become centered pull-quotes, `-` lists get
- * gold square bullets, and `![images]` sit on an offset deep-green panel whose
- * side alternates. Blog posts keep the simpler `ArticleBody`.
+ * Editorial article renderer shared by service detail and blog post pages:
+ * `##` headings become numbered sections (01/02…), `>` quotes become centered
+ * pull-quotes, `-` lists get gold square bullets, and `![images]` sit on an
+ * offset deep-green panel whose side alternates.
  */
-export default function ServiceArticleBody({ description }: { description: string }) {
+export default function EditorialArticleBody({ description }: { description: string }) {
   const blocks = parseBlocks(description);
 
   // Ordinals computed purely (no render-time mutation): a heading's section
