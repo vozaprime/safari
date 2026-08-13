@@ -27,6 +27,17 @@ const entityLabels: Record<string, string> = {
   post: "yazı",
 };
 
+// On-brand, mutually distinct palette for the "by service" distribution — each
+// category gets its own colour (cycled if there are more than six).
+const DIST_COLORS = [
+  "var(--color-gold)",
+  "var(--color-forest)",
+  "var(--color-mist)",
+  "var(--color-gold-dark)",
+  "var(--color-emerald)",
+  "var(--color-stone)",
+];
+
 export default async function DashboardPage() {
   const session = await getVerifiedSession();
   const isAdmin = session?.role === "admin";
@@ -94,17 +105,23 @@ export default async function DashboardPage() {
             <p className="mt-4 text-sm text-stone">Henüz veri yok.</p>
           ) : (
             <ul className="mt-4 space-y-3">
-              {dist.map((d) => (
-                <li key={d.service}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="truncate text-ink">{d.service}</span>
-                    <span className="text-stone">{d.count}</span>
-                  </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded bg-ivory">
-                    <div className="h-full rounded bg-gold" style={{ width: `${(d.count / distMax) * 100}%` }} />
-                  </div>
-                </li>
-              ))}
+              {dist.map((d, i) => {
+                const color = DIST_COLORS[i % DIST_COLORS.length];
+                return (
+                  <li key={d.service}>
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="flex min-w-0 items-center gap-2 text-ink">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
+                        <span className="truncate">{d.service}</span>
+                      </span>
+                      <span className="shrink-0 text-stone">{d.count}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded bg-ivory">
+                      <div className="h-full rounded" style={{ width: `${(d.count / distMax) * 100}%`, backgroundColor: color }} />
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </AdminCard>

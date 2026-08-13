@@ -6,7 +6,6 @@ export default function MiniBarChart({
   height?: number;
 }) {
   const max = Math.max(1, ...data.map((d) => d.value));
-  const barW = 100 / data.length;
 
   return (
     <div>
@@ -25,7 +24,6 @@ export default function MiniBarChart({
         <span>{data[Math.floor(data.length / 2)]?.label}</span>
         <span>{data[data.length - 1]?.label}</span>
       </div>
-      <style>{`.flex-1 { min-width: ${barW}%; }`}</style>
     </div>
   );
 }
