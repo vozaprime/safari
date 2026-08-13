@@ -3,29 +3,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Reveal from "@/components/Reveal";
 import ServiceIcon from "@/components/ServiceIcon";
-import ArticleBody from "@/components/ArticleBody";
+import ServiceArticleBody from "@/components/ServiceArticleBody";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
 import { getService, getServiceLocales, getServices } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-
-// Mid-article accent image per service (distinct from the top banner, same palette).
-const inlineImages: Record<string, string> = {
-  "mali-danismanlik": "/images/services/inline/charts.jpg",
-  "yatirim-danismanligi": "/images/services/inline/coins.jpg",
-  "pazar-arastirmasi-pazara-giris": "/images/services/inline/charts.jpg",
-  "uyum-denetim-danismanligi": "/images/services/inline/charts.jpg",
-  "mali-ticari-hukuk-danismanligi": "/images/services/mali-danismanlik.jpg",
-  "ticaret-is-gelistirme": "/images/services/lojistik-gumruk-danismanligi.jpg",
-  "sirket-kurulusu": "/images/about.jpg",
-  "kurumsal-kimlik-marka": "/images/heroes/contact.jpg",
-  "proje-yonetimi": "/images/about.jpg",
-  "gayrimenkul-danismanligi": "/images/heroes/services.jpg",
-  "oturma-calisma-izni-vatandaslik": "/images/services/pazar-arastirmasi-pazara-giris.jpg",
-  "lojistik-gumruk-danismanligi": "/images/services/pazar-arastirmasi-pazara-giris.jpg",
-  "cozum-ortakliklari": "/images/about.jpg",
-};
 
 export async function generateMetadata({
   params,
@@ -63,14 +46,11 @@ export default async function ServiceDetailPage({
 
   return (
     <>
+      {/* Header — preserved exactly (forest hero with banner image) */}
       <section className="relative overflow-hidden bg-forest text-ivory">
         <div className="absolute inset-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={service.image}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={service.image} alt="" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-forest-deep/95 via-forest/85 to-forest/60" />
         </div>
         <div className="relative mx-auto max-w-6xl px-5 py-16 md:py-24">
@@ -97,48 +77,49 @@ export default async function ServiceDetailPage({
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-5 py-16 md:py-20">
-        <ArticleBody
-          description={service.description}
-          inlineImage={inlineImages[service.slug]}
-          inlineAlt={service.title}
-        />
+      {/* Article — editorial redesign */}
+      <article className="bg-ivory">
+        <div className="mx-auto max-w-3xl px-5 py-16 md:py-20">
+          <ServiceArticleBody description={service.description} />
 
-        {service.scope.length > 0 && (
-          <Reveal delay={1}>
-            <h2 className="font-display mt-16 flex items-center gap-3 text-2xl text-forest">
-              <span className="h-px w-8 bg-gold" aria-hidden="true" />
-              {t.services.scope_title}
-            </h2>
-            <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-              {service.scope.map((item) => (
-                <li key={item} className="flex items-start gap-3 rounded-md border border-sand bg-white px-4 py-3">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="mt-0.5 h-4 w-4 shrink-0 text-gold-dark" aria-hidden="true">
-                    <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span className="text-sm text-ink">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </Reveal>
-        )}
+          {/* Scope */}
+          {service.scope.length > 0 && (
+            <Reveal className="mt-20">
+              <div className="flex items-center gap-3.5 border-b border-sand pb-5">
+                <span className="h-px w-9 bg-gold" aria-hidden="true" />
+                <h2 className="font-display text-2xl font-medium text-forest md:text-3xl">{t.services.scope_title}</h2>
+              </div>
+              <ul className="mt-8 grid gap-x-10 gap-y-4 sm:grid-cols-2">
+                {service.scope.map((item) => (
+                  <li key={item} className="flex items-baseline gap-3.5">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 bg-gold" aria-hidden="true" />
+                    <span className="font-semibold leading-[1.6] text-ink">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          )}
+        </div>
 
-        <Reveal delay={2}>
-          <div className="mt-14 overflow-hidden rounded-xl bg-forest p-8 text-ivory md:p-10">
-            <h2 className="font-display text-2xl">{t.services.detail_cta_title}</h2>
-            <p className="mt-2 max-w-xl text-sm text-ivory/70">{t.services.detail_cta_text}</p>
+        {/* CTA */}
+        <div className="mx-auto max-w-2xl px-5 pb-24 text-center md:pb-28">
+          <Reveal>
+            <span className="mx-auto block h-px w-9 bg-gold" aria-hidden="true" />
+            <h2 className="mt-7 font-display text-3xl font-medium leading-[1.15] text-forest md:text-[40px]">{t.services.detail_cta_title}</h2>
+            <p className="mx-auto mt-5 max-w-lg leading-[1.7] text-stone">{t.services.detail_cta_text}</p>
             <Link
               href={`/${locale}/contact?service=${service.slug}`}
-              className="mt-6 inline-block rounded-md bg-gold px-7 py-3.5 text-sm font-medium text-gold-ink transition-colors hover:bg-gold-dark hover:text-ivory"
+              className="mt-8 inline-block bg-forest px-10 py-[18px] text-xs font-semibold uppercase tracking-[0.16em] text-ivory transition-colors hover:bg-gold hover:text-forest"
             >
               {t.services.detail_cta_button}
             </Link>
-          </div>
-        </Reveal>
-      </section>
+          </Reveal>
+        </div>
+      </article>
 
+      {/* Other services */}
       {others.length > 0 && (
-        <section className="border-t border-sand bg-ivory/50">
+        <section className="border-t border-sand bg-white">
           <div className="mx-auto max-w-6xl px-5 py-14 md:py-16">
             <h2 className="font-display flex items-center gap-3 text-2xl text-forest">
               <span className="h-px w-8 bg-gold" aria-hidden="true" />
