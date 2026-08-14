@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Logo from "./Logo";
 import SocialLinks from "./SocialLinks";
+import CookiePrefsLink from "./CookiePrefsLink";
 import type { Locale } from "@/lib/i18n";
 import { getDict } from "@/lib/i18n";
 
@@ -67,11 +68,24 @@ export default function Footer({
         </div>
       </div>
       <div className="border-t border-emerald-line">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-5 py-5 text-xs text-mist md:flex-row">
-          <span>
-            © {year} SAFARI CONSULTING. {t.footer.rights}
-          </span>
-          <span className="tracking-[0.2em]">FINANCE · INVESTMENT · TRADE · ADVISORY</span>
+        <div className="mx-auto max-w-6xl px-5 py-5">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-mist">
+            <Link href={`/${locale}/cerez-politikasi`} className="transition-colors hover:text-gold">
+              {t.footer.cookie_policy}
+            </Link>
+            <span aria-hidden="true" className="text-emerald-line">·</span>
+            <Link href={`/${locale}/kvkk`} className="transition-colors hover:text-gold">
+              {t.footer.kvkk}
+            </Link>
+            <span aria-hidden="true" className="text-emerald-line">·</span>
+            <CookiePrefsLink label={t.footer.cookie_prefs} className="transition-colors hover:text-gold" />
+          </div>
+          <div className="mt-4 flex flex-col items-center justify-between gap-2 text-xs text-mist md:flex-row">
+            <span>
+              © {year} SAFARI CONSULTING. {t.footer.rights}
+            </span>
+            <span className="tracking-[0.2em]">FINANCE · INVESTMENT · TRADE · ADVISORY</span>
+          </div>
         </div>
       </div>
     </footer>

@@ -127,6 +127,22 @@ const tr = {
     quick_links: "Hızlı bağlantılar",
     contact: "İletişim",
     rights: "Tüm hakları saklıdır.",
+    legal: "Yasal",
+    cookie_policy: "Çerez Politikası",
+    kvkk: "KVKK Aydınlatma Metni",
+    cookie_prefs: "Çerez tercihleri",
+  },
+  cookie: {
+    title: "Çerez Tercihleri",
+    summary: "Deneyiminizi iyileştirmek ve trafiği analiz etmek için çerez kullanıyoruz.",
+    details: "Çerez Politikası",
+    accept: "Kabul et",
+    reject: "Reddet",
+    prefs: "Çerez tercihleri",
+  },
+  legal: {
+    updated: "Son güncelleme",
+    contact_title: "Veri sorumlusu ve iletişim",
   },
 };
 
@@ -238,6 +254,22 @@ const en: typeof tr = {
     quick_links: "Quick links",
     contact: "Contact",
     rights: "All rights reserved.",
+    legal: "Legal",
+    cookie_policy: "Cookie Policy",
+    kvkk: "Data Protection Notice",
+    cookie_prefs: "Cookie preferences",
+  },
+  cookie: {
+    title: "Cookie Preferences",
+    summary: "We use cookies to enhance your experience and analyse site traffic.",
+    details: "Cookie Policy",
+    accept: "Accept",
+    reject: "Reject",
+    prefs: "Cookie preferences",
+  },
+  legal: {
+    updated: "Last updated",
+    contact_title: "Data controller & contact",
   },
 };
 
@@ -349,6 +381,22 @@ const ru: typeof tr = {
     quick_links: "Быстрые ссылки",
     contact: "Контакты",
     rights: "Все права защищены.",
+    legal: "Правовая информация",
+    cookie_policy: "Политика cookie",
+    kvkk: "Уведомление о защите данных",
+    cookie_prefs: "Настройки cookie",
+  },
+  cookie: {
+    title: "Настройки cookie",
+    summary: "Мы используем файлы cookie для улучшения работы сайта и анализа трафика.",
+    details: "Политика cookie",
+    accept: "Принять",
+    reject: "Отклонить",
+    prefs: "Настройки cookie",
+  },
+  legal: {
+    updated: "Последнее обновление",
+    contact_title: "Оператор данных и контакты",
   },
 };
 

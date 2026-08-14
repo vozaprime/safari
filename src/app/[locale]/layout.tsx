@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/SmoothScroll";
+import CookieConsent from "@/components/CookieConsent";
 import { defaultLocale, getDict, isLocale, siteDescriptions, type Locale } from "@/lib/i18n";
 import { countPublishedPosts, getServices, getSettings } from "@/lib/content";
 import { DEFAULT_OG_IMAGE } from "@/lib/seo";
@@ -79,16 +80,9 @@ export default async function LocaleLayout({
         />
         <main className="pt-[72px]">{children}</main>
         <Footer locale={locale} settings={settings} />
-        {gaId && (
-          <>
-            <script async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`} />
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaId}');`,
-              }}
-            />
-          </>
-        )}
+        {/* GA is loaded from inside CookieConsent, and only after the visitor
+            accepts analytics cookies (KVKK açık rıza). */}
+        <CookieConsent gaId={gaId} labels={t.cookie} policyHref={`/${locale}/cerez-politikasi`} />
       </body>
     </html>
   );

@@ -166,6 +166,15 @@ body {
   animation: drift 24s linear infinite alternate;
 }
 
+@keyframes cookieUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cookie-bar {
+  animation: cookieUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
   .topo-drift { animation: none; }
@@ -174,5 +183,6 @@ body {
   .story-step-in { animation: none; }
   .universe-item-in { animation: none; }
   .scroll-cue-line { animation: none; }
+  .cookie-bar { animation: none; }
   html { scroll-behavior: auto; }
 }
