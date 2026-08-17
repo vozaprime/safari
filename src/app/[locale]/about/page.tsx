@@ -1,10 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
-import PageHero from "@/components/PageHero";
+import StoryHero from "@/components/StoryHero";
+import AutoVideo from "@/components/AutoVideo";
 import StatRing from "@/components/StatRing";
+import TiltCard from "@/components/TiltCard";
 import ValueIcon from "@/components/ValueIcon";
-import TopoPattern from "@/components/TopoPattern";
+import ReferencesStrip from "@/components/ReferencesMarquee";
 import { ProseText, renderInline } from "@/lib/richtext";
 import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
 import { getPageContent, getServices, getReferences } from "@/lib/content";
@@ -61,11 +63,20 @@ export default async function AboutPage({
 
   return (
     <>
-      <PageHero image="/images/heroes/about.jpg" kicker="SAFARI CONSULTING" title={t.about.title} description={t.footer.tagline} />
+      {/* Cinematic hero (same treatment as the homepage) */}
+      <StoryHero
+        videoSrc="/videos/hero-compass.mp4"
+        kicker="SAFARI CONSULTING"
+        title={t.about.story_title}
+        subtitle={t.footer.tagline}
+        cta1={{ label: t.hero.cta1, href: `/${locale}/services` }}
+        cta2={{ label: t.hero.cta2, href: `/${locale}/contact` }}
+        scrollCue={t.story.scroll_cue}
+      />
 
-      {/* Narrative */}
+      {/* Story narrative — editorial, with an image collage */}
       <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
-        <div className="grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <Reveal>
             <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold-dark">{t.about.story_kicker}</p>
             <h2 className="font-display mt-3 text-3xl text-forest md:text-4xl">{t.about.story_title}</h2>
@@ -74,19 +85,20 @@ export default async function AboutPage({
           </Reveal>
           <Reveal delay={1}>
             <div className="relative">
-              <div aria-hidden="true" className="absolute -left-4 -top-4 h-28 w-28 rounded-2xl bg-gold/15" />
-              <div aria-hidden="true" className="absolute -bottom-4 -right-4 h-28 w-28 rounded-2xl border-2 border-forest/15" />
+              <div aria-hidden="true" className="absolute -right-4 -top-4 h-24 w-24 rounded-2xl border-2 border-gold/40" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/images/about.jpg" alt="" className="relative z-10 aspect-[4/5] w-full rounded-2xl object-cover shadow-xl shadow-forest/10" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/services/yatirim-danismanligi.jpg" alt="" className="absolute -bottom-6 -left-6 z-20 hidden aspect-square w-36 rounded-xl border-4 border-ivory object-cover shadow-lg shadow-forest/20 sm:block" />
             </div>
           </Reveal>
         </div>
       </section>
 
-      {/* Stats band */}
+      {/* Stats over motion */}
       <section className="relative overflow-hidden bg-forest text-ivory">
-        <TopoPattern className="pointer-events-none absolute inset-0 h-full w-full opacity-60" />
-        <div className="absolute inset-0 bg-gradient-to-b from-forest-deep/40 via-transparent to-forest-deep/40" />
+        <AutoVideo src="/videos/story-route.mp4" className="absolute inset-0 h-full w-full object-cover opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-forest via-forest/70 to-forest" />
         <div className="relative mx-auto max-w-6xl px-5 py-16 md:py-20">
           <div className="grid grid-cols-2 gap-x-6 gap-y-12 md:grid-cols-4">
             {stats.map((stat, i) => (
@@ -107,13 +119,14 @@ export default async function AboutPage({
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
           <Reveal>
             <div className="relative h-full overflow-hidden rounded-2xl border border-emerald-line bg-forest p-8 text-ivory md:p-10">
-              <TopoPattern className="pointer-events-none absolute inset-0 h-full w-full opacity-40" />
+              <AutoVideo src="/videos/hero-skyline.mp4" className="absolute inset-0 h-full w-full object-cover opacity-[0.15]" />
+              <div className="absolute inset-0 bg-forest/70" />
               <div className="relative">
                 <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gold/15 text-gold">
                   <MissionIcon />
                 </span>
                 <h3 className="font-display mt-5 text-2xl text-gold">{t.about.mission}</h3>
-                <p className="mt-3 leading-relaxed text-ivory/80">{renderInline(content.about_mission ?? "")}</p>
+                <p className="mt-3 leading-relaxed text-ivory/85">{renderInline(content.about_mission ?? "")}</p>
               </div>
             </div>
           </Reveal>
@@ -132,35 +145,53 @@ export default async function AboutPage({
         </div>
       </section>
 
-      {/* Values */}
-      <section className="border-y border-sand bg-ivory py-20 md:py-24">
-        <div className="mx-auto max-w-6xl px-5">
-          <Reveal className="text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold-dark">{t.home.values_kicker}</p>
-            <h2 className="font-display mt-3 text-3xl text-forest md:text-4xl">{t.home.values_title}</h2>
+      {/* Values — glass cards over motion (homepage treatment) */}
+      <section className="relative overflow-hidden bg-forest text-ivory">
+        <AutoVideo src="/videos/hero-skyline.mp4" className="absolute inset-0 h-full w-full object-cover opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-forest via-forest/70 to-forest" />
+        <div className="relative mx-auto max-w-6xl px-5 py-20 md:py-24">
+          <Reveal>
+            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold">{t.home.values_kicker}</p>
+            <h2 className="font-display mt-3 max-w-2xl text-3xl md:text-4xl">{t.home.values_title}</h2>
           </Reveal>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {values.map((value, i) => (
               <Reveal key={value.title} delay={(i % 3) as 0 | 1 | 2} className="h-full">
-                <div className="group h-full rounded-2xl border border-sand bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-lg hover:shadow-forest/5">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-forest/[0.07] text-forest transition-colors duration-300 group-hover:bg-gold/15 group-hover:text-gold-dark">
-                    <ValueIcon index={i} className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-4 text-sm font-semibold text-forest">{value.title}</h3>
-                  <p className="mt-2 text-[13px] leading-relaxed text-stone">{value.text}</p>
-                </div>
+                <TiltCard className="h-full">
+                  <div className="glass-card group h-full rounded-lg border border-ivory/15 bg-white/[0.06] p-5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-gold/60 hover:bg-white/[0.12] hover:shadow-xl hover:shadow-forest-deep/50">
+                    <span className="inline-flex text-gold/80 transition-all duration-300 group-hover:scale-110 group-hover:text-gold">
+                      <ValueIcon index={i} />
+                    </span>
+                    <h3 className="mt-3 text-sm font-semibold text-gold">{value.title}</h3>
+                    <p className="mt-2 text-[13px] leading-relaxed text-ivory/75 transition-colors group-hover:text-ivory/90">{value.text}</p>
+                  </div>
+                </TiltCard>
               </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
+      {/* References marquee */}
+      {references.length > 0 && (
+        <section className="border-y border-sand bg-white py-16">
+          <div className="mx-auto max-w-6xl px-5">
+            <Reveal>
+              <p className="text-center text-[11px] tracking-[0.3em] text-gold-dark">{t.home.references_kicker}</p>
+              <h2 className="font-display mt-3 text-center text-2xl text-forest md:text-3xl">{t.home.references_title}</h2>
+            </Reveal>
+          </div>
+          <ReferencesStrip items={references.map((ref) => ({ name: ref.name, logo: ref.logo || undefined }))} href={`/${locale}/references`} />
+        </section>
+      )}
+
+      {/* CTA over sunrise video */}
       <section className="relative overflow-hidden bg-forest-deep text-ivory">
-        <TopoPattern className="pointer-events-none absolute inset-0 h-full w-full opacity-50" />
-        <div className="relative mx-auto max-w-3xl px-5 py-20 text-center md:py-28">
+        <AutoVideo src="/videos/story-sunrise.mp4" className="absolute inset-0 h-full w-full object-cover opacity-50" />
+        <div className="absolute inset-0 bg-forest-deep/55" />
+        <div className="relative mx-auto max-w-6xl px-5 py-24 text-center md:py-32">
           <Reveal>
-            <h2 className="font-display text-3xl md:text-4xl">{t.home.cta_title}</h2>
+            <h2 className="font-display mx-auto max-w-2xl text-3xl md:text-5xl">{t.home.cta_title}</h2>
             <p className="mx-auto mt-4 max-w-xl text-ivory/75">{t.home.cta_text}</p>
             <Link
               href={`/${locale}/contact`}
