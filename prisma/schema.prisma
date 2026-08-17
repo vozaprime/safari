@@ -19,6 +19,7 @@ model User {
   twoFactorEnabled Boolean   @default(false)
   twoFactorSecret  String? // AES-GCM encrypted base32 TOTP secret
   twoFactorBackupCodes String? // JSON array of sha256-hashed recovery codes
+  archivedAt       DateTime? // soft-archive: hidden from lists + blocked at login
   createdAt        DateTime  @default(now())
 }
 
@@ -29,6 +30,7 @@ model Service {
   image        String               @default("")
   order        Int                  @default(0)
   visible      Boolean              @default(true)
+  archivedAt   DateTime? // soft-archive: hidden from admin lists + public site
   translations ServiceTranslation[]
 }
 
@@ -66,11 +68,12 @@ model ServiceTranslation {
 }
 
 model Reference {
-  id      Int     @id @default(autoincrement())
-  name    String
-  logo    String  @default("")
-  order   Int     @default(0)
-  visible Boolean @default(true)
+  id         Int       @id @default(autoincrement())
+  name       String
+  logo       String    @default("")
+  order      Int       @default(0)
+  visible    Boolean   @default(true)
+  archivedAt DateTime? // soft-archive: hidden from admin lists + public site
 }
 
 model PageContent {
@@ -94,6 +97,7 @@ model ContactMessage {
   status    String   @default("new")
   notes     String   @default("")
   ip        String   @default("")
+  archivedAt DateTime? // soft-archive: hidden from default inbox, kept for records
   createdAt DateTime @default(now())
 
   @@index([status, createdAt])
@@ -110,6 +114,7 @@ model Post {
   cover        String            @default("")
   published    Boolean           @default(false)
   order        Int               @default(0)
+  archivedAt   DateTime? // soft-archive: hidden from admin lists + public blog
   createdAt    DateTime          @default(now())
   translations PostTranslation[]
 }

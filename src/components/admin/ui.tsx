@@ -117,6 +117,21 @@ export const inputClass =
   "w-full rounded-md border border-sand bg-white px-3.5 py-2.5 text-sm text-ink outline-none transition-colors focus:border-gold focus:ring-2 focus:ring-gold/20";
 export const labelClass = "mb-1.5 block text-xs font-medium uppercase tracking-wider text-stone";
 
+/* Shared list/table + row-action-menu tokens (no overflow on the wrapper so
+   RowActions dropdowns are never clipped; hide low-priority columns on mobile). */
+export const tableWrap = "rounded-xl border border-sand bg-white";
+export const tableClass = "w-full border-collapse text-sm";
+export const thClass = "px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-stone";
+export const tdClass = "px-4 py-3 align-middle text-sm text-ink";
+export const menuItemClass =
+  "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-ivory";
+export const menuItemDanger =
+  "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50";
+export const iconBtnClass =
+  "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-stone transition-colors hover:bg-ivory hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/40";
+export const iconBtnDanger =
+  "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-stone transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-300";
+
 export function Field({
   label,
   htmlFor,

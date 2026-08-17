@@ -7,11 +7,12 @@ export default function SelectAll() {
       aria-label="Tümünü seç"
       className="h-4 w-4 accent-forest"
       onChange={(e) => {
-        const form = e.currentTarget.closest("form");
-        if (!form) return;
-        form
+        // Toggle every id checkbox on the page (they associate with the bulk
+        // form via the HTML5 `form=` attribute, so they aren't DOM children of it).
+        const checked = e.currentTarget.checked;
+        document
           .querySelectorAll<HTMLInputElement>('input[name="ids"]')
-          .forEach((cb) => (cb.checked = e.currentTarget.checked));
+          .forEach((cb) => (cb.checked = checked));
       }}
     />
   );

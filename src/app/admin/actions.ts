@@ -68,7 +68,8 @@ export async function loginAction(formData: FormData) {
   }
 
   const user = await prisma.user.findUnique({ where: { email } });
-  const ok = user ? await bcrypt.compare(password, user.passwordHash) : false;
+  // Archived (soft-disabled) accounts cannot sign in.
+  const ok = user && !user.archivedAt ? await bcrypt.compare(password, user.passwordHash) : false;
 
   await prisma.loginAttempt.create({ data: { key: email, success: ok } });
   if (ip !== "unknown") await prisma.loginAttempt.create({ data: { key: ip, success: ok } });
@@ -613,13 +614,17 @@ export async function bulkMessageAction(formData: FormData) {
     .getAll("ids")
     .map((v) => Number(v))
     .filter((n) => Number.isFinite(n));
-  if (ids.length === 0) redirect("/admin/messages");
+  if (ids.length === 0) return;
   if (op === "delete") {
     await prisma.contactMessage.deleteMany({ where: { id: { in: ids } } });
+  } else if (op === "archive") {
+    await prisma.contactMessage.updateMany({ where: { id: { in: ids } }, data: { archivedAt: new Date() } });
+  } else if (op === "restore") {
+    await prisma.contactMessage.updateMany({ where: { id: { in: ids } }, data: { archivedAt: null } });
   } else if (["new", "read", "replied"].includes(op)) {
     await prisma.contactMessage.updateMany({ where: { id: { in: ids } }, data: { status: op } });
   }
-  redirect("/admin/messages?toast=saved");
+  revalidatePath("/", "layout");
 }
 
 /* ---------------- Users ---------------- */
@@ -755,4 +760,117 @@ export async function deleteUserAction(id: number) {
   await prisma.user.delete({ where: { id } });
   await logAudit(session.email, "delete", "user", `#${id}`);
   redirect("/admin/users?toast=deleted");
+}
+
+/* ---------------- List views: status toggles & archive/restore ----------------
+ * In-place updates for the shared list/kanban row actions. These mutate and
+ * return WITHOUT redirecting, so the current view (list vs kanban, active vs
+ * archive) is preserved and the affected row/card simply updates, moves lane,
+ * or drops out on the automatic re-render. Errors still redirect with a toast.
+ * `revalidatePath("/", "layout")` also refreshes the public site + sidebar. */
+
+// Services
+export async function setServiceVisibleAction(id: number, visible: boolean) {
+  const session = await requireSession();
+  await prisma.service.update({ where: { id }, data: { visible } });
+  await logAudit(session.email, visible ? "show" : "hide", "service", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function archiveServiceAction(id: number) {
+  const session = await requireSession();
+  await prisma.service.update({ where: { id }, data: { archivedAt: new Date() } });
+  await logAudit(session.email, "archive", "service", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function restoreServiceAction(id: number) {
+  const session = await requireSession();
+  await prisma.service.update({ where: { id }, data: { archivedAt: null } });
+  await logAudit(session.email, "restore", "service", `#${id}`);
+  revalidatePath("/", "layout");
+}
+
+// References
+export async function setReferenceVisibleAction(id: number, visible: boolean) {
+  const session = await requireSession();
+  await prisma.reference.update({ where: { id }, data: { visible } });
+  await logAudit(session.email, visible ? "show" : "hide", "reference", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function archiveReferenceAction(id: number) {
+  const session = await requireSession();
+  await prisma.reference.update({ where: { id }, data: { archivedAt: new Date() } });
+  await logAudit(session.email, "archive", "reference", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function restoreReferenceAction(id: number) {
+  const session = await requireSession();
+  await prisma.reference.update({ where: { id }, data: { archivedAt: null } });
+  await logAudit(session.email, "restore", "reference", `#${id}`);
+  revalidatePath("/", "layout");
+}
+
+// Posts
+export async function setPostPublishedAction(id: number, published: boolean) {
+  const session = await requireSession();
+  await prisma.post.update({ where: { id }, data: { published } });
+  await logAudit(session.email, published ? "publish" : "unpublish", "post", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function archivePostAction(id: number) {
+  const session = await requireSession();
+  await prisma.post.update({ where: { id }, data: { archivedAt: new Date() } });
+  await logAudit(session.email, "archive", "post", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function restorePostAction(id: number) {
+  const session = await requireSession();
+  await prisma.post.update({ where: { id }, data: { archivedAt: null } });
+  await logAudit(session.email, "restore", "post", `#${id}`);
+  revalidatePath("/", "layout");
+}
+
+// Messages
+export async function moveMessageStatusAction(id: number, status: string) {
+  const session = await requireSession();
+  if (["new", "read", "replied"].includes(status)) {
+    await prisma.contactMessage.update({ where: { id }, data: { status } });
+    await logAudit(session.email, `status:${status}`, "message", `#${id}`);
+  }
+  revalidatePath("/", "layout");
+}
+export async function archiveMessageAction(id: number) {
+  const session = await requireSession();
+  await prisma.contactMessage.update({ where: { id }, data: { archivedAt: new Date() } });
+  await logAudit(session.email, "archive", "message", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function restoreMessageAction(id: number) {
+  const session = await requireSession();
+  await prisma.contactMessage.update({ where: { id }, data: { archivedAt: null } });
+  await logAudit(session.email, "restore", "message", `#${id}`);
+  revalidatePath("/", "layout");
+}
+
+// Users
+export async function setUserRoleAction(id: number, role: string) {
+  const session = await requireAdmin();
+  if (id === session.userId) redirect("/admin/users?toast=error&msg=" + encodeURIComponent("Kendi rolünüzü değiştiremezsiniz."));
+  const next = role === "admin" ? "admin" : "editor";
+  await prisma.user.update({ where: { id }, data: { role: next } });
+  await logAudit(session.email, "update", "user", `#${id} role=${next}`);
+}
+export async function archiveUserAction(id: number) {
+  const session = await requireAdmin();
+  if (id === session.userId) redirect("/admin/users?toast=error&msg=" + encodeURIComponent("Kendi hesabınızı arşivleyemezsiniz."));
+  const activeCount = await prisma.user.count({ where: { archivedAt: null } });
+  if (activeCount <= 1) redirect("/admin/users?toast=error&msg=" + encodeURIComponent("Son aktif kullanıcı arşivlenemez."));
+  await prisma.user.update({ where: { id }, data: { archivedAt: new Date(), tokenVersion: { increment: 1 } } });
+  await logAudit(session.email, "archive", "user", `#${id}`);
+  revalidatePath("/", "layout");
+}
+export async function restoreUserAction(id: number) {
+  const session = await requireAdmin();
+  await prisma.user.update({ where: { id }, data: { archivedAt: null } });
+  await logAudit(session.email, "restore", "user", `#${id}`);
+  revalidatePath("/", "layout");
 }

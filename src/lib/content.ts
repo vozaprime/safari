@@ -7,7 +7,7 @@ export async function getServiceLocales(slug: string): Promise<Locale[]> {
     where: { slug },
     include: { translations: { select: { locale: true, title: true } } },
   });
-  if (!service || !service.visible) return [];
+  if (!service || !service.visible || service.archivedAt) return [];
   return service.translations
     .filter((t) => t.title.trim() !== "" && (locales as readonly string[]).includes(t.locale))
     .map((t) => t.locale as Locale);
@@ -19,7 +19,7 @@ export async function getPostLocales(slug: string): Promise<Locale[]> {
     where: { slug },
     include: { translations: { select: { locale: true, title: true } } },
   });
-  if (!post || !post.published) return [];
+  if (!post || !post.published || post.archivedAt) return [];
   return post.translations
     .filter((t) => t.title.trim() !== "" && (locales as readonly string[]).includes(t.locale))
     .map((t) => t.locale as Locale);
@@ -36,7 +36,7 @@ export async function getPageContent(locale: Locale, keys?: string[]) {
 
 export async function getServices(locale: Locale) {
   const services = await prisma.service.findMany({
-    where: { visible: true },
+    where: { visible: true, archivedAt: null },
     orderBy: { order: "asc" },
     include: { translations: { where: { locale } } },
   });
@@ -59,7 +59,7 @@ export async function getService(locale: Locale, slug: string) {
     where: { slug },
     include: { translations: { where: { locale } } },
   });
-  if (!service || !service.visible || service.translations.length === 0) return null;
+  if (!service || !service.visible || service.archivedAt || service.translations.length === 0) return null;
   return {
     id: service.id,
     slug: service.slug,
@@ -73,12 +73,12 @@ export async function getService(locale: Locale, slug: string) {
 }
 
 export async function getReferences() {
-  return prisma.reference.findMany({ where: { visible: true }, orderBy: { order: "asc" } });
+  return prisma.reference.findMany({ where: { visible: true, archivedAt: null }, orderBy: { order: "asc" } });
 }
 
 export async function getPosts(locale: Locale, publishedOnly = true) {
   const posts = await prisma.post.findMany({
-    where: publishedOnly ? { published: true } : {},
+    where: { archivedAt: null, ...(publishedOnly ? { published: true } : {}) },
     orderBy: { createdAt: "desc" },
     include: { translations: { where: { locale } } },
   });
@@ -100,7 +100,7 @@ export async function getPost(locale: Locale, slug: string) {
     where: { slug },
     include: { translations: { where: { locale } } },
   });
-  if (!post || !post.published || post.translations.length === 0) return null;
+  if (!post || !post.published || post.archivedAt || post.translations.length === 0) return null;
   return {
     id: post.id,
     slug: post.slug,
@@ -113,14 +113,14 @@ export async function getPost(locale: Locale, slug: string) {
 }
 
 export async function countPublishedPosts() {
-  return prisma.post.count({ where: { published: true } });
+  return prisma.post.count({ where: { published: true, archivedAt: null } });
 }
 
 export const POSTS_PER_PAGE = 9;
 
 /** Paginated published posts for a locale (DB-level skip/take + total count). */
 export async function getPublishedPostsPage(locale: Locale, page: number) {
-  const where = { published: true, translations: { some: { locale, title: { not: "" } } } };
+  const where = { published: true, archivedAt: null, translations: { some: { locale, title: { not: "" } } } };
   const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const [total, posts] = await Promise.all([
     prisma.post.count({ where }),

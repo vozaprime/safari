@@ -9,6 +9,8 @@ const MESSAGES: Record<string, { kind: "success" | "error"; text: string }> = {
   saved: { kind: "success", text: "Değişiklikler kaydedildi." },
   created: { kind: "success", text: "Kayıt oluşturuldu." },
   deleted: { kind: "success", text: "Kayıt silindi." },
+  archived: { kind: "success", text: "Arşive alındı." },
+  restored: { kind: "success", text: "Arşivden çıkarıldı." },
   sent: { kind: "success", text: "Test e-postası gönderildi." },
   pwsaved: { kind: "success", text: "Şifre güncellendi." },
   uploaded: { kind: "success", text: "Dosya yüklendi." },

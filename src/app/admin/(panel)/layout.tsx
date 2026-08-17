@@ -9,7 +9,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const session = await getVerifiedSession();
   if (!session) redirect("/admin/login");
 
-  const newCount = await prisma.contactMessage.count({ where: { status: "new" } });
+  const newCount = await prisma.contactMessage.count({ where: { status: "new", archivedAt: null } });
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
