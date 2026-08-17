@@ -94,35 +94,50 @@ export default function StoryHero({
     };
     if (scrub && video) video.addEventListener("loadedmetadata", seekToScroll);
 
+    const READ_MS = 3000; // once the user starts scrolling, keep the caption
+    let scrollStart = -1; // fully readable at least this long (ms) before fading
+
     let raf = 0;
     let last = -1;
     const loop = () => {
       if (root.current) {
         const p = progress();
-        if (Math.abs(p - last) > 0.003) {
-          last = p;
-          if (media.current) {
-            const scale = scrub ? 1 + p * 0.1 : 1 + p * 0.18;
-            media.current.style.transform = `translateZ(0) scale(${Math.round(scale * 1000) / 1000})`;
-            if (scrub) {
+        const pChanged = Math.abs(p - last) > 0.003;
+
+        if (scrub) {
+          // The caption stays fully readable for READ_MS after the first scroll,
+          // then fades — so it must update every frame, not only when scroll moves.
+          if (content.current) {
+            if (scrollStart < 0 && p > 0.02) scrollStart = performance.now();
+            const since = scrollStart < 0 ? 0 : performance.now() - scrollStart;
+            const hold =
+              scrollStart < 0 || since < READ_MS ? 1 : Math.max(0, 1 - (since - READ_MS) / 900);
+            const scrollOp = p < 0.6 ? 1 : Math.max(0, 1 - (p - 0.6) / 0.35);
+            content.current.style.opacity = Math.max(scrollOp, hold).toFixed(2);
+            content.current.style.transform = `translate3d(0, ${Math.round(p * -50)}px, 0)`;
+          }
+          if (pChanged) {
+            last = p;
+            if (media.current) {
+              const scale = 1 + p * 0.1;
+              media.current.style.transform = `translateZ(0) scale(${Math.round(scale * 1000) / 1000})`;
               const d = media.current.duration;
               if (d && isFinite(d)) media.current.currentTime = p * d;
             }
-          }
-          if (scrub) {
-            // Reveal the video as the caption clears so its motion is fully seen.
-            if (grad.current) grad.current.style.opacity = Math.max(1 - p * 0.9, 0.2).toFixed(2);
+            // Reveal more of the video as you scroll, but keep it legible early.
+            if (grad.current) grad.current.style.opacity = Math.max(1 - p * 0.6, 0.3).toFixed(2);
             if (shade.current) shade.current.style.opacity = (p * 0.22).toFixed(2);
-            if (content.current) {
-              content.current.style.transform = `translate3d(0, ${Math.round(p * -60)}px, 0)`;
-              content.current.style.opacity = Math.max(1 - p * 2, 0).toFixed(2);
-            }
-          } else {
-            if (shade.current) shade.current.style.opacity = (p * 0.85).toFixed(2);
-            if (content.current) {
-              content.current.style.transform = `translate3d(0, ${Math.round(p * -90)}px, 0)`;
-              content.current.style.opacity = Math.max(1 - p * 1.1, 0).toFixed(2);
-            }
+          }
+        } else if (pChanged) {
+          last = p;
+          if (media.current) {
+            const scale = 1 + p * 0.18;
+            media.current.style.transform = `translateZ(0) scale(${Math.round(scale * 1000) / 1000})`;
+          }
+          if (shade.current) shade.current.style.opacity = (p * 0.85).toFixed(2);
+          if (content.current) {
+            content.current.style.transform = `translate3d(0, ${Math.round(p * -90)}px, 0)`;
+            content.current.style.opacity = Math.max(1 - p * 1.1, 0).toFixed(2);
           }
         }
       }
@@ -187,12 +202,12 @@ export default function StoryHero({
 
   // Scrub hero: a pin track holds the stage while scroll drives the video.
   // Track height = viewport (sticky) + travel. Travel = extra height that maps
-  // to the full clip, so a smaller track => faster video-per-scroll. 130vh means
-  // the whole clip scrubs in ~a third of a screen of scroll — snappy, and the
-  // all-keyframe encode of the clip keeps every scrubbed frame crisp.
+  // to the full clip, so a smaller track => faster video-per-scroll. 150vh gives
+  // a calm pace (~half a screen of scroll for the clip); the all-keyframe encode
+  // keeps every scrubbed frame crisp.
   if (scrub) {
     return (
-      <section ref={root} className="relative -mt-[72px] h-[130vh] bg-forest text-ivory">
+      <section ref={root} className="relative -mt-[72px] h-[150vh] bg-forest text-ivory">
         <div className="sticky top-0 h-screen min-h-[560px] overflow-hidden">{stage}</div>
       </section>
     );
