@@ -12,6 +12,7 @@ export default function StoryHero({
   cta1,
   cta2,
   scrollCue,
+  scrub = false,
 }: {
   videoSrc: string;
   kicker: string;
@@ -20,6 +21,9 @@ export default function StoryHero({
   cta1: { label: string; href: string };
   cta2: { label: string; href: string };
   scrollCue: string;
+  /** When true, the video is scrubbed by scroll (currentTime follows progress)
+   *  instead of autoplaying. Falls back to autoplay under reduced-motion. */
+  scrub?: boolean;
 }) {
   const root = useRef<HTMLElement>(null);
   const media = useRef<HTMLVideoElement>(null);
@@ -28,34 +32,61 @@ export default function StoryHero({
 
   useEffect(() => {
     const video = media.current;
-    const io = video
-      ? new IntersectionObserver(
-          (entries) => {
-            for (const entry of entries) {
-              if (entry.isIntersecting) (entry.target as HTMLVideoElement).play().catch(() => {});
-              else (entry.target as HTMLVideoElement).pause();
-            }
-          },
-          { threshold: 0.05 }
-        )
-      : null;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // In scrub mode we drive currentTime from scroll, so the video must not
+    // autoplay — except as a reduced-motion fallback where we just let it loop.
+    const autoplay = !scrub || reduce;
+
+    const io =
+      video && autoplay
+        ? new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (entry.isIntersecting) (entry.target as HTMLVideoElement).play().catch(() => {});
+                else (entry.target as HTMLVideoElement).pause();
+              }
+            },
+            { threshold: 0.05 }
+          )
+        : null;
     if (video && io) io.observe(video);
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (reduce) {
       return () => io?.disconnect();
     }
+
+    const progress = () => {
+      const el = root.current;
+      if (!el) return 0;
+      const rect = el.getBoundingClientRect();
+      return Math.min(Math.max(-rect.top / Math.max(rect.height, 1), 0), 1);
+    };
+
+    // Paint the frame matching the current scroll position as soon as the
+    // video knows its duration (so it isn't blank before the first scroll).
+    const seekToScroll = () => {
+      const v = media.current;
+      if (!v) return;
+      const d = v.duration;
+      if (d && isFinite(d)) v.currentTime = progress() * d;
+    };
+    if (scrub && video) video.addEventListener("loadedmetadata", seekToScroll);
 
     let raf = 0;
     let last = -1;
     const loop = () => {
-      const el = root.current;
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        const p = Math.min(Math.max(-rect.top / Math.max(rect.height, 1), 0), 1);
+      if (root.current) {
+        const p = progress();
         if (Math.abs(p - last) > 0.004) {
           last = p;
           const scale = Math.round((1 + p * 0.18) * 1000) / 1000;
-          if (media.current) media.current.style.transform = `translateZ(0) scale(${scale})`;
+          if (media.current) {
+            media.current.style.transform = `translateZ(0) scale(${scale})`;
+            if (scrub) {
+              const d = media.current.duration;
+              if (d && isFinite(d)) media.current.currentTime = p * d;
+            }
+          }
           if (shade.current) shade.current.style.opacity = (p * 0.85).toFixed(2);
           if (content.current) {
             content.current.style.transform = `translate3d(0, ${Math.round(p * -90)}px, 0)`;
@@ -69,8 +100,9 @@ export default function StoryHero({
     return () => {
       cancelAnimationFrame(raf);
       io?.disconnect();
+      if (video) video.removeEventListener("loadedmetadata", seekToScroll);
     };
-  }, []);
+  }, [scrub]);
 
   return (
     <section ref={root} className="relative -mt-[72px] h-screen min-h-[560px] overflow-hidden bg-forest text-ivory">
@@ -78,10 +110,11 @@ export default function StoryHero({
         ref={media}
         src={videoSrc}
         className="absolute inset-0 h-full w-full object-cover will-change-transform"
-        autoPlay
+        autoPlay={!scrub}
         muted
-        loop
+        loop={!scrub}
         playsInline
+        preload={scrub ? "auto" : "metadata"}
       />
       <div className="absolute inset-0 bg-gradient-to-r from-forest-deep/85 via-forest/55 to-forest/25" />
       <div ref={shade} className="absolute inset-0 bg-forest-deep opacity-0" />
