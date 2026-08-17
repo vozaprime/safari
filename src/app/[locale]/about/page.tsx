@@ -65,7 +65,7 @@ export default async function AboutPage({
     <>
       {/* Cinematic hero (same treatment as the homepage) */}
       <StoryHero
-        videoSrc="/videos/about-lion.mp4"
+        videoSrc="/videos/about-hero.mp4"
         scrub
         kicker="SAFARI CONSULTING"
         title={t.about.story_title}
