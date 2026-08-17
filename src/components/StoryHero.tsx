@@ -187,11 +187,12 @@ export default function StoryHero({
 
   // Scrub hero: a pin track holds the stage while scroll drives the video.
   // Track height = viewport (sticky) + travel. Travel = extra height that maps
-  // to the full clip, so a smaller track => faster video-per-scroll. 150vh here
-  // means the whole clip scrubs in ~half a screen of scroll (snappy but pinned).
+  // to the full clip, so a smaller track => faster video-per-scroll. 130vh means
+  // the whole clip scrubs in ~a third of a screen of scroll — snappy, and the
+  // all-keyframe encode of the clip keeps every scrubbed frame crisp.
   if (scrub) {
     return (
-      <section ref={root} className="relative -mt-[72px] h-[150vh] bg-forest text-ivory">
+      <section ref={root} className="relative -mt-[72px] h-[130vh] bg-forest text-ivory">
         <div className="sticky top-0 h-screen min-h-[560px] overflow-hidden">{stage}</div>
       </section>
     );
