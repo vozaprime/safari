@@ -87,6 +87,10 @@ const tr = {
     title: "Hakkımızda",
     mission: "Misyonumuz",
     vision: "Vizyonumuz",
+    story_kicker: "Hikâyemiz",
+    story_title: "Stratejik çözüm ortağınız",
+    mv_kicker: "İlkelerimiz",
+    mv_title: "Misyon & Vizyon",
   },
   references: {
     title: "Referanslarımız",
@@ -214,6 +218,10 @@ const en: typeof tr = {
     title: "About Us",
     mission: "Our Mission",
     vision: "Our Vision",
+    story_kicker: "Our Story",
+    story_title: "Your strategic solution partner",
+    mv_kicker: "Our Principles",
+    mv_title: "Mission & Vision",
   },
   references: {
     title: "Our References",
@@ -341,6 +349,10 @@ const ru: typeof tr = {
     title: "О нас",
     mission: "Наша миссия",
     vision: "Наше видение",
+    story_kicker: "Наша история",
+    story_title: "Ваш стратегический партнёр",
+    mv_kicker: "Наши принципы",
+    mv_title: "Миссия и видение",
   },
   references: {
     title: "Наши референсы",
