@@ -21,21 +21,24 @@ export default function StoryHero({
   cta1: { label: string; href: string };
   cta2: { label: string; href: string };
   scrollCue: string;
-  /** When true, the video is scrubbed by scroll (currentTime follows progress)
-   *  instead of autoplaying. Falls back to autoplay under reduced-motion. */
+  /** When true the hero is pinned and the video is scrubbed by scroll: the
+   *  section stays fixed on screen while scrolling drives currentTime from 0 to
+   *  the full duration, and the page only advances once the clip has finished.
+   *  Falls back to a static first frame under reduced-motion. */
   scrub?: boolean;
 }) {
   const root = useRef<HTMLElement>(null);
   const media = useRef<HTMLVideoElement>(null);
+  const grad = useRef<HTMLDivElement>(null);
   const shade = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const video = media.current;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // In scrub mode we drive currentTime from scroll, so the video must not
-    // autoplay — except as a reduced-motion fallback where we just let it loop.
-    const autoplay = !scrub || reduce;
+    // Only the default (non-scrub) hero autoplays. The scrub hero is driven by
+    // scroll instead — and shows a static first frame under reduced-motion.
+    const autoplay = !scrub;
 
     const io =
       video && autoplay
@@ -52,18 +55,37 @@ export default function StoryHero({
     if (video && io) io.observe(video);
 
     if (reduce) {
+      // Reduced motion: collapse the pin track to one screen and just paint the
+      // first frame — no scrubbing, no autoplay for the scrub hero.
+      if (scrub) {
+        if (root.current) root.current.style.height = "100vh";
+        if (video) {
+          const paint = () => {
+            try {
+              video.currentTime = 0;
+            } catch {}
+          };
+          if (video.readyState >= 1) paint();
+          else video.addEventListener("loadedmetadata", paint, { once: true });
+        }
+      }
       return () => io?.disconnect();
     }
 
+    // Scroll progress 0→1. For the pinned (scrub) hero the travel is the extra
+    // height beyond one viewport; otherwise it's the section's own height.
     const progress = () => {
       const el = root.current;
       if (!el) return 0;
       const rect = el.getBoundingClientRect();
-      return Math.min(Math.max(-rect.top / Math.max(rect.height, 1), 0), 1);
+      const denom = scrub
+        ? Math.max(rect.height - window.innerHeight, 1)
+        : Math.max(rect.height, 1);
+      return Math.min(Math.max(-rect.top / denom, 0), 1);
     };
 
-    // Paint the frame matching the current scroll position as soon as the
-    // video knows its duration (so it isn't blank before the first scroll).
+    // Paint the frame matching the current scroll position as soon as the video
+    // knows its duration (so it isn't blank before the first scroll).
     const seekToScroll = () => {
       const v = media.current;
       if (!v) return;
@@ -77,20 +99,30 @@ export default function StoryHero({
     const loop = () => {
       if (root.current) {
         const p = progress();
-        if (Math.abs(p - last) > 0.004) {
+        if (Math.abs(p - last) > 0.003) {
           last = p;
-          const scale = Math.round((1 + p * 0.18) * 1000) / 1000;
           if (media.current) {
-            media.current.style.transform = `translateZ(0) scale(${scale})`;
+            const scale = scrub ? 1 + p * 0.1 : 1 + p * 0.18;
+            media.current.style.transform = `translateZ(0) scale(${Math.round(scale * 1000) / 1000})`;
             if (scrub) {
               const d = media.current.duration;
               if (d && isFinite(d)) media.current.currentTime = p * d;
             }
           }
-          if (shade.current) shade.current.style.opacity = (p * 0.85).toFixed(2);
-          if (content.current) {
-            content.current.style.transform = `translate3d(0, ${Math.round(p * -90)}px, 0)`;
-            content.current.style.opacity = Math.max(1 - p * 1.1, 0).toFixed(2);
+          if (scrub) {
+            // Reveal the video as the caption clears so its motion is fully seen.
+            if (grad.current) grad.current.style.opacity = Math.max(1 - p * 0.9, 0.2).toFixed(2);
+            if (shade.current) shade.current.style.opacity = (p * 0.22).toFixed(2);
+            if (content.current) {
+              content.current.style.transform = `translate3d(0, ${Math.round(p * -60)}px, 0)`;
+              content.current.style.opacity = Math.max(1 - p * 2, 0).toFixed(2);
+            }
+          } else {
+            if (shade.current) shade.current.style.opacity = (p * 0.85).toFixed(2);
+            if (content.current) {
+              content.current.style.transform = `translate3d(0, ${Math.round(p * -90)}px, 0)`;
+              content.current.style.opacity = Math.max(1 - p * 1.1, 0).toFixed(2);
+            }
           }
         }
       }
@@ -104,8 +136,8 @@ export default function StoryHero({
     };
   }, [scrub]);
 
-  return (
-    <section ref={root} className="relative -mt-[72px] h-screen min-h-[560px] overflow-hidden bg-forest text-ivory">
+  const stage = (
+    <>
       <video
         ref={media}
         src={videoSrc}
@@ -116,7 +148,10 @@ export default function StoryHero({
         playsInline
         preload={scrub ? "auto" : "metadata"}
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-forest-deep/85 via-forest/55 to-forest/25" />
+      <div
+        ref={grad}
+        className="absolute inset-0 bg-gradient-to-r from-forest-deep/85 via-forest/55 to-forest/25"
+      />
       <div ref={shade} className="absolute inset-0 bg-forest-deep opacity-0" />
 
       <div className="relative mx-auto flex h-full max-w-6xl flex-col justify-center px-5">
@@ -147,6 +182,24 @@ export default function StoryHero({
         <span className="text-[10px] uppercase tracking-[0.35em] text-ivory/70">{scrollCue}</span>
         <span className="scroll-cue-line block h-10 w-px bg-gold" />
       </div>
+    </>
+  );
+
+  // Scrub hero: a tall track pins the stage while scroll drives the video.
+  if (scrub) {
+    return (
+      <section ref={root} className="relative -mt-[72px] h-[300vh] bg-forest text-ivory">
+        <div className="sticky top-0 h-screen min-h-[560px] overflow-hidden">{stage}</div>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      ref={root}
+      className="relative -mt-[72px] h-screen min-h-[560px] overflow-hidden bg-forest text-ivory"
+    >
+      {stage}
     </section>
   );
 }
