@@ -5,6 +5,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/SmoothScroll";
 import CookieConsent from "@/components/CookieConsent";
+import ScrollToTop from "@/components/ScrollToTop";
 import { defaultLocale, getDict, isLocale, siteDescriptions, type Locale } from "@/lib/i18n";
 import { countPublishedPosts, getServices, getSettings } from "@/lib/content";
 import { DEFAULT_OG_IMAGE } from "@/lib/seo";
@@ -83,6 +84,7 @@ export default async function LocaleLayout({
         {/* GA is loaded from inside CookieConsent, and only after the visitor
             accepts analytics cookies (KVKK açık rıza). */}
         <CookieConsent gaId={gaId} labels={t.cookie} policyHref={`/${locale}/cerez-politikasi`} />
+        <ScrollToTop label={t.ui.back_to_top} />
       </body>
     </html>
   );

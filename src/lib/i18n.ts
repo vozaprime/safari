@@ -144,6 +144,9 @@ const tr = {
     reject: "Reddet",
     prefs: "Çerez tercihleri",
   },
+  ui: {
+    back_to_top: "Başa dön",
+  },
   legal: {
     updated: "Son güncelleme",
     contact_title: "Veri sorumlusu ve iletişim",
@@ -275,6 +278,9 @@ const en: typeof tr = {
     reject: "Reject",
     prefs: "Cookie preferences",
   },
+  ui: {
+    back_to_top: "Back to top",
+  },
   legal: {
     updated: "Last updated",
     contact_title: "Data controller & contact",
@@ -405,6 +411,9 @@ const ru: typeof tr = {
     accept: "Принять",
     reject: "Отклонить",
     prefs: "Настройки cookie",
+  },
+  ui: {
+    back_to_top: "Наверх",
   },
   legal: {
     updated: "Последнее обновление",

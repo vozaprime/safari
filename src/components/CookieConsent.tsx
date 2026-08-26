@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Script from "next/script";
 
@@ -37,6 +37,7 @@ export default function CookieConsent({
   // Start "pending" on both server and client so first paint matches (no
   // hydration mismatch); the effect then resolves the real state.
   const [decision, setDecision] = useState<Decision>("pending");
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -59,6 +60,25 @@ export default function CookieConsent({
   const showGA = Boolean(gaId) && decision === "accepted";
   const showBar = decision === "prompt";
 
+  // Publish the bar's height so other bottom-docked UI (the back-to-top button)
+  // can lift itself clear of it instead of hard-coding an offset.
+  useEffect(() => {
+    const root = document.documentElement;
+    const el = barRef.current;
+    if (!showBar || !el) {
+      root.style.removeProperty("--sc-bottom-bar");
+      return;
+    }
+    const measure = () => root.style.setProperty("--sc-bottom-bar", `${el.offsetHeight}px`);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--sc-bottom-bar");
+    };
+  }, [showBar]);
+
   return (
     <>
       {showGA && (
@@ -75,7 +95,10 @@ export default function CookieConsent({
       )}
 
       {showBar && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] px-3 pb-3 sm:px-4 sm:pb-4">
+        <div
+          ref={barRef}
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] px-3 pb-3 sm:px-4 sm:pb-4"
+        >
           <div
             role="region"
             aria-label={labels.title}

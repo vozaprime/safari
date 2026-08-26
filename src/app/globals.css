@@ -184,5 +184,6 @@ body {
   .universe-item-in { animation: none; }
   .scroll-cue-line { animation: none; }
   .cookie-bar { animation: none; }
+  .scroll-top-fab, .scroll-top-fab * { transition: none !important; }
   html { scroll-behavior: auto; }
 }
