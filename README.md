@@ -35,6 +35,28 @@ Diğer komutlar: `npm run build` · `npm run start` · `npm run lint` · `npm ru
 > canlı şemayı da değiştirir (alan ekleme güvenli, silme değil) ve `db:seed` mevcut içeriği
 > ezebilir. Kurulu bir ortamda `npm install` + `npx prisma generate` yeterlidir.
 
+### İçerik scriptleri
+
+Uzun metinler panelden değil, dosyadan toplu uygulanır. İçerik `scripts/content/` altında
+durur; uygulama scriptleri slug üzerinden **idempotent** çalışır (tekrar çalıştırmak kayıt
+çoğaltmaz).
+
+```bash
+npx tsx scripts/check-posts.ts             # blog denetimi — DB'ye dokunmaz
+npx tsx scripts/apply-posts.ts             # kuru çalışma, ne yapacağını yazar
+npx tsx scripts/apply-posts.ts --publish   # uygular ve yayına alır (--draft ile taslak)
+npx tsx scripts/apply-descriptions.ts      # hizmet açıklamalarını uygular
+npx tsx scripts/check-richtext-images.ts   # mini-markdown ayrıştırıcı testleri
+```
+
+`check-posts.ts` şunları doğrular: dil başına en az 300 kelime, her dilde 3+ başlık ·
+1+ alıntı · 1+ liste · tam 2 makale-içi görsel, görsel yollarının `public/` altında
+gerçekten var olması, kapak görselinin makale içinde tekrar kullanılmaması ve üç dilde
+aynı görsellerin kullanılması. **Yayın öncesi çalıştırın** — hata varsa çıkış kodu 1'dir.
+
+> ⚠️ `--publish` doğrudan **canlı** veritabanına yazar. Blog sayfaları `force-dynamic`
+> olduğu için içerik deploy beklemeden anında yayına girer.
+
 ## Ortam değişkenleri
 
 `.env` (yerelde) / Vercel proje ayarları (canlıda):
@@ -115,6 +137,7 @@ Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayın
 ## Bilinen tuzaklar
 
 - **Yerel ve canlı aynı veritabanını paylaşır** — şema değişikliği her iki ortamı da etkiler
+- **Menüdeki Blog linki koşulludur** — yayında hiç yazı yoksa (`published=true` ve arşivlenmemiş) link hiç render edilmez (`src/app/[locale]/layout.tsx` → `showBlog`). Link "kayboldu" diyorsanız önce yazıların yayın durumuna bakın
 - **`next dev`/`next start` çalışırken `prisma generate`** DLL kilidi (EPERM) verir; önce Next süreçlerini kapatın
 - **Form metinleri CRLF gelir** — `src/lib/richtext.tsx` ve server action'lar `\r\n` → `\n` normalize eder
 - **`site_logo` ayarı doluysa** yerleşik `/brand/logo.png` ezilir
