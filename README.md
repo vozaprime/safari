@@ -106,7 +106,7 @@ kullanılır. Bir dilin tanımadığı slug (başka dilin yazımı ya da yeniden
 adlandırmadan önceki ad) sayfada **308** ile doğru adrese gider — örnek:
 `/en/services/mali-danismanlik` → `/en/services/financial-advisory`.
 
-Mevcut 26 kaydın dil slug'ları `scripts/content/slugs.ts` içinde tanımlıdır;
+Mevcut 26 kaydın dil slug'ları `prisma/slugs.ts` içinde tanımlıdır;
 `scripts/apply-slugs.ts` bunları veritabanına yazar (varsayılan kuru çalışma,
 yazmak için `--publish`). `prisma/seed.ts` ve `scripts/apply-posts.ts` de aynı
 kaynaktan beslenir, böylece sıfırdan kurulum da yerelleştirilmiş adres üretir.

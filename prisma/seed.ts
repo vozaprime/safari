@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { serviceSlugs } from "../scripts/content/slugs";
+import { serviceSlugs } from "./slugs";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
