@@ -17,7 +17,7 @@ export async function generateMetadata({
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const t = getDict(locale);
-  return pageMetadata({ locale, path: "/contact", title: t.contact.title, image: "/images/heroes/contact.jpg" });
+  return pageMetadata({ locale, route: "contact", title: t.contact.title, image: "/images/heroes/contact.jpg" });
 }
 
 export default async function ContactPage({

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
 import ServiceCard from "@/components/ServiceCard";
 import PageHero from "@/components/PageHero";
-import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
+import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
 import { getServices } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
@@ -18,7 +18,7 @@ export async function generateMetadata({
   const t = getDict(locale);
   return pageMetadata({
     locale,
-    path: "/services",
+    route: "services",
     title: t.services.title,
     description: t.services.subtitle,
     image: "/images/heroes/services.jpg",
@@ -49,7 +49,7 @@ export default async function ServicesPage({
           {services.map((service, i) => (
             <Reveal key={service.slug} delay={(i % 3) as 0 | 1 | 2} className="h-full">
               <ServiceCard
-                href={`/${locale}/services/${service.slug}`}
+                href={localePath(locale, "services", service.slug)}
                 image={service.image}
                 icon={service.icon}
                 title={service.title}

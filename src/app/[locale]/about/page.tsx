@@ -8,7 +8,7 @@ import TiltCard from "@/components/TiltCard";
 import ValueIcon from "@/components/ValueIcon";
 import ReferencesStrip from "@/components/ReferencesMarquee";
 import { ProseText, renderInline } from "@/lib/richtext";
-import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
+import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
 import { getPageContent, getServices, getReferences } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
@@ -22,7 +22,7 @@ export async function generateMetadata({
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const t = getDict(locale);
-  return pageMetadata({ locale, path: "/about", title: t.about.title, image: "/images/heroes/about.jpg" });
+  return pageMetadata({ locale, route: "about", title: t.about.title, image: "/images/heroes/about.jpg" });
 }
 
 const MissionIcon = () => (
@@ -70,8 +70,8 @@ export default async function AboutPage({
         kicker="SAFARI CONSULTING"
         title={t.about.story_title}
         subtitle={t.footer.tagline}
-        cta1={{ label: t.hero.cta1, href: `/${locale}/services` }}
-        cta2={{ label: t.hero.cta2, href: `/${locale}/contact` }}
+        cta1={{ label: t.hero.cta1, href: localePath(locale, "services") }}
+        cta2={{ label: t.hero.cta2, href: localePath(locale, "contact") }}
         scrollCue={t.story.scroll_cue}
       />
 
@@ -182,7 +182,7 @@ export default async function AboutPage({
               <h2 className="font-display mt-3 text-center text-2xl text-forest md:text-3xl">{t.home.references_title}</h2>
             </Reveal>
           </div>
-          <ReferencesStrip items={references.map((ref) => ({ name: ref.name, logo: ref.logo || undefined }))} href={`/${locale}/references`} />
+          <ReferencesStrip items={references.map((ref) => ({ name: ref.name, logo: ref.logo || undefined }))} href={localePath(locale, "references")} />
         </section>
       )}
 
@@ -195,7 +195,7 @@ export default async function AboutPage({
             <h2 className="font-display mx-auto max-w-2xl text-3xl md:text-5xl">{t.home.cta_title}</h2>
             <p className="mx-auto mt-4 max-w-xl text-ivory/75">{t.home.cta_text}</p>
             <Link
-              href={`/${locale}/contact`}
+              href={localePath(locale, "contact")}
               className="mt-8 inline-block rounded-md bg-gold px-8 py-4 text-sm font-medium text-gold-ink transition-colors hover:bg-gold-dark hover:text-ivory"
             >
               {t.home.cta_button}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import Reveal from "@/components/Reveal";
 import PageHero from "@/components/PageHero";
-import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
+import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
 import { getPublishedPostsPage } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
@@ -18,7 +18,7 @@ export async function generateMetadata({
   const t = getDict(locale);
   return pageMetadata({
     locale,
-    path: "/blog",
+    route: "blog",
     title: t.blog.title,
     description: t.blog.subtitle,
     image: "/images/heroes/services.jpg",
@@ -61,7 +61,7 @@ export default async function BlogPage({
               {items.map((post, i) => (
                 <Reveal key={post.slug} delay={(i % 3) as 0 | 1 | 2} className="h-full">
                   <Link
-                    href={`/${locale}/blog/${post.slug}`}
+                    href={localePath(locale, "blog", post.slug)}
                     className="group flex h-full flex-col overflow-hidden rounded-lg border border-sand bg-white transition-all hover:-translate-y-1 hover:border-gold/60 hover:shadow-xl hover:shadow-forest/15"
                   >
                     <span className="relative block aspect-[16/10] overflow-hidden bg-forest">
@@ -93,14 +93,14 @@ export default async function BlogPage({
             {totalPages > 1 && (
               <nav aria-label={t.blog.title} className="mt-12 flex flex-wrap items-center justify-center gap-2">
                 {page > 1 && (
-                  <Link href={`/${locale}/blog?page=${page - 1}`} rel="prev" className={`${pageLink} border-sand text-ink hover:border-gold`}>
+                  <Link href={`${localePath(locale, "blog")}?page=${page - 1}`} rel="prev" className={`${pageLink} border-sand text-ink hover:border-gold`}>
                     {t.blog.prev}
                   </Link>
                 )}
                 {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((n) => (
                   <Link
                     key={n}
-                    href={`/${locale}/blog?page=${n}`}
+                    href={`${localePath(locale, "blog")}?page=${n}`}
                     aria-current={n === page ? "page" : undefined}
                     className={`${pageLink} ${n === page ? "border-gold bg-gold text-gold-ink" : "border-sand text-ink hover:border-gold"}`}
                   >
@@ -108,7 +108,7 @@ export default async function BlogPage({
                   </Link>
                 ))}
                 {page < totalPages && (
-                  <Link href={`/${locale}/blog?page=${page + 1}`} rel="next" className={`${pageLink} border-sand text-ink hover:border-gold`}>
+                  <Link href={`${localePath(locale, "blog")}?page=${page + 1}`} rel="next" className={`${pageLink} border-sand text-ink hover:border-gold`}>
                     {t.blog.next}
                   </Link>
                 )}

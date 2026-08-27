@@ -11,7 +11,7 @@ import ReferencesStrip from "@/components/ReferencesMarquee";
 import ProcessStory, { type StoryStep } from "@/components/ProcessStory";
 import ServiceUniverse, { type UniverseGroup } from "@/components/ServiceUniverse";
 import { ProseText } from "@/lib/richtext";
-import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
+import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
 import { getPageContent, getReferences, getServices } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
@@ -24,7 +24,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
-  return pageMetadata({ locale, path: "" });
+  return pageMetadata({ locale });
 }
 
 const CHAPTER_MEDIA: StoryStep["media"][] = [
@@ -95,7 +95,7 @@ export default async function HomePage({
     services: def.slugs
       .map((slug) => services.find((s) => s.slug === slug))
       .filter((s): s is NonNullable<typeof s> => Boolean(s))
-      .map((s) => ({ title: s.title, summary: s.summary, icon: s.icon, href: `/${locale}/services/${s.slug}` })),
+      .map((s) => ({ title: s.title, summary: s.summary, icon: s.icon, href: localePath(locale, "services", s.slug) })),
   }));
   for (const s of services) {
     if (!grouped.has(s.slug)) {
@@ -103,7 +103,7 @@ export default async function HomePage({
         title: s.title,
         summary: s.summary,
         icon: s.icon,
-        href: `/${locale}/services/${s.slug}`,
+        href: localePath(locale, "services", s.slug),
       });
     }
   }
@@ -141,8 +141,8 @@ export default async function HomePage({
         kicker={content.hero_kicker ?? ""}
         title={content.hero_title ?? ""}
         subtitle={content.hero_subtitle ?? ""}
-        cta1={{ label: t.hero.cta1, href: `/${locale}/services` }}
-        cta2={{ label: t.hero.cta2, href: `/${locale}/contact` }}
+        cta1={{ label: t.hero.cta1, href: localePath(locale, "services") }}
+        cta2={{ label: t.hero.cta2, href: localePath(locale, "contact") }}
         scrollCue={t.story.scroll_cue}
       />
 
@@ -214,7 +214,7 @@ export default async function HomePage({
         </div>
         <ReferencesStrip
           items={references.map((ref) => ({ name: ref.name, logo: ref.logo || undefined }))}
-          href={`/${locale}/references`}
+          href={localePath(locale, "references")}
         />
       </section>
 
@@ -230,7 +230,7 @@ export default async function HomePage({
             <h2 className="font-display mx-auto max-w-2xl text-3xl md:text-5xl">{t.home.cta_title}</h2>
             <p className="mx-auto mt-4 max-w-xl text-ivory/75">{t.home.cta_text}</p>
             <Link
-              href={`/${locale}/contact`}
+              href={localePath(locale, "contact")}
               className="mt-8 inline-block rounded-md bg-gold px-8 py-4 text-sm font-medium text-gold-ink transition-colors hover:bg-gold-dark hover:text-ivory"
             >
               {t.home.cta_button}

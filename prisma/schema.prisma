@@ -58,6 +58,9 @@ model ServiceTranslation {
   id          Int     @id @default(autoincrement())
   serviceId   Int
   locale      String
+  // Per-locale URL name. null falls back to Service.slug, so a service created
+  // before this column — or from the panel without one — still resolves.
+  slug        String?
   title       String
   summary     String
   description String
@@ -65,6 +68,7 @@ model ServiceTranslation {
   service     Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@unique([serviceId, locale])
+  @@unique([locale, slug])
 }
 
 model Reference {
@@ -123,10 +127,13 @@ model PostTranslation {
   id      Int    @id @default(autoincrement())
   postId  Int
   locale  String
+  // Per-locale URL name; null falls back to Post.slug (see ServiceTranslation).
+  slug    String?
   title   String
   excerpt String @default("")
   body    String @default("")
   post    Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, locale])
+  @@unique([locale, slug])
 }

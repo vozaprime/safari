@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { slugIn } from "@/lib/content";
+import { localePath } from "@/lib/i18n";
 import { PageHeader, AdminCard, inputClass, labelClass, Field } from "@/components/admin/ui";
 import SubmitButton from "@/components/admin/SubmitButton";
 import Uploader from "@/components/admin/Uploader";
@@ -23,7 +25,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
       </Link>
       <PageHeader title={`Yazıyı düzenle — ${byLocale.tr?.title ?? post.slug}`}>
         {post.published && (
-          <Link href={`/tr/blog/${post.slug}`} target="_blank" className="inline-flex items-center gap-1.5 rounded-md border border-sand px-3 py-2 text-xs text-forest hover:border-gold/60">
+          <Link href={localePath("tr", "blog", slugIn(post.slug, post.translations, "tr"))} target="_blank" className="inline-flex items-center gap-1.5 rounded-md border border-sand px-3 py-2 text-xs text-forest hover:border-gold/60">
             <AdminIcon name="external" className="h-4 w-4" /> Sitede önizle
           </Link>
         )}
@@ -38,7 +40,7 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
             </div>
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex-1">
-                <Field label="URL adı (slug)" htmlFor="slug" hint="değiştirmezseniz aynı kalır">
+                <Field label="Ortak URL adı" htmlFor="slug" hint="dil slug'ı boşsa kullanılır; scriptlerin anahtarı">
                   <input id="slug" name="slug" defaultValue={post.slug} className={inputClass} />
                 </Field>
               </div>
@@ -57,6 +59,13 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
               <div className="mt-4 space-y-4">
                 <Field label="Başlık" htmlFor={`${locale}_title`}>
                   <input id={`${locale}_title`} name={`${locale}_title`} defaultValue={t?.title ?? ""} className={inputClass} />
+                </Field>
+                <Field
+                  label="URL adı (bu dilde)"
+                  htmlFor={`${locale}_slug`}
+                  hint="boş bırakılırsa ortak URL adı kullanılır; değiştirirseniz eski adres kalıcı olarak yenisine yönlenir"
+                >
+                  <input id={`${locale}_slug`} name={`${locale}_slug`} defaultValue={t?.slug ?? ""} className={inputClass} />
                 </Field>
                 <Field label="Özet (liste kartlarında görünür)" htmlFor={`${locale}_excerpt`}>
                   <textarea id={`${locale}_excerpt`} name={`${locale}_excerpt`} rows={2} defaultValue={t?.excerpt ?? ""} className={inputClass} />

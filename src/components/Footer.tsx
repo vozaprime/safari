@@ -2,8 +2,7 @@ import Link from "next/link";
 import Logo from "./Logo";
 import SocialLinks from "./SocialLinks";
 import CookiePrefsLink from "./CookiePrefsLink";
-import type { Locale } from "@/lib/i18n";
-import { getDict } from "@/lib/i18n";
+import { getDict, localePath, type Locale } from "@/lib/i18n";
 
 export default function Footer({
   locale,
@@ -16,10 +15,10 @@ export default function Footer({
   const year = new Date().getFullYear();
 
   const links = [
-    { href: `/${locale}/about`, label: t.nav.about },
-    { href: `/${locale}/services`, label: t.nav.services },
-    { href: `/${locale}/references`, label: t.nav.references },
-    { href: `/${locale}/contact`, label: t.nav.contact },
+    { href: localePath(locale, "about"), label: t.nav.about },
+    { href: localePath(locale, "services"), label: t.nav.services },
+    { href: localePath(locale, "references"), label: t.nav.references },
+    { href: localePath(locale, "contact"), label: t.nav.contact },
   ];
 
   return (
@@ -70,11 +69,11 @@ export default function Footer({
       <div className="border-t border-emerald-line">
         <div className="mx-auto max-w-6xl px-5 py-5">
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-mist">
-            <Link href={`/${locale}/cerez-politikasi`} className="transition-colors hover:text-gold">
+            <Link href={localePath(locale, "cerez-politikasi")} className="transition-colors hover:text-gold">
               {t.footer.cookie_policy}
             </Link>
             <span aria-hidden="true" className="text-emerald-line">·</span>
-            <Link href={`/${locale}/kvkk`} className="transition-colors hover:text-gold">
+            <Link href={localePath(locale, "kvkk")} className="transition-colors hover:text-gold">
               {t.footer.kvkk}
             </Link>
             <span aria-hidden="true" className="text-emerald-line">·</span>
