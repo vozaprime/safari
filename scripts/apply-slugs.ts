@@ -9,7 +9,7 @@
 //
 // DATABASE_URL ortamda tanımlı olmalıdır (.env varsa Prisma kendisi yükler).
 import { PrismaClient } from "@prisma/client";
-import { serviceSlugs, postSlugs, type SlugSet } from "./content/slugs";
+import { serviceSlugs, postSlugs, type SlugSet } from "../prisma/slugs";
 
 const LOCALES = ["tr", "en", "ru"] as const;
 

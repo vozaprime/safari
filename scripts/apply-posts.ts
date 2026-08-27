@@ -11,7 +11,7 @@ import { items as A } from "./content/blog-A";
 import { items as B } from "./content/blog-B";
 import { items as C } from "./content/blog-C";
 import { items as D } from "./content/blog-D";
-import { postSlugs } from "./content/slugs";
+import { postSlugs } from "../prisma/slugs";
 
 const LOCALES = ["tr", "en", "ru"] as const;
 type Locale = (typeof LOCALES)[number];
