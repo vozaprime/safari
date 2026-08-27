@@ -11,6 +11,7 @@ import { items as A } from "./content/blog-A";
 import { items as B } from "./content/blog-B";
 import { items as C } from "./content/blog-C";
 import { items as D } from "./content/blog-D";
+import { postSlugs } from "./content/slugs";
 
 const LOCALES = ["tr", "en", "ru"] as const;
 type Locale = (typeof LOCALES)[number];
@@ -72,10 +73,13 @@ async function main() {
 
     for (const locale of LOCALES) {
       const t = item[locale];
+      // Per-locale URL name; null falls back to the shared slug. Kept in step
+      // with apply-slugs.ts so re-running either script lands the same state.
+      const slug = postSlugs[item.slug]?.[locale] ?? null;
       await prisma.postTranslation.upsert({
         where: { postId_locale: { postId: post.id, locale } },
-        create: { postId: post.id, locale, title: t.title, excerpt: t.excerpt, body: t.body.trim() },
-        update: { title: t.title, excerpt: t.excerpt, body: t.body.trim() },
+        create: { postId: post.id, locale, title: t.title, excerpt: t.excerpt, body: t.body.trim(), slug },
+        update: { title: t.title, excerpt: t.excerpt, body: t.body.trim(), slug },
       });
     }
   }

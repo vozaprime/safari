@@ -6,9 +6,9 @@ import Footer from "@/components/Footer";
 import SmoothScroll from "@/components/SmoothScroll";
 import CookieConsent from "@/components/CookieConsent";
 import ScrollToTop from "@/components/ScrollToTop";
-import { defaultLocale, getDict, isLocale, siteDescriptions, type Locale } from "@/lib/i18n";
+import { defaultLocale, getDict, isLocale, localePath, siteDescriptions, type Locale } from "@/lib/i18n";
 import { countPublishedPosts, getServices, getSettings } from "@/lib/content";
-import { DEFAULT_OG_IMAGE } from "@/lib/seo";
+import { DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/seo";
 import { inter, playfair } from "@/lib/fonts";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export async function generateMetadata({
   const description = settings.seo_description || siteDescriptions[locale];
 
   return {
-    metadataBase: new URL(process.env.SITE_URL || "http://localhost:3000"),
+    metadataBase: new URL(SITE_URL),
     title: {
       default: siteName,
       template: `%s | ${siteName}`,
@@ -61,7 +61,7 @@ export default async function LocaleLayout({
   const t = getDict(locale);
   const [settings, blogCount, services] = await Promise.all([
     getSettings(),
-    countPublishedPosts(),
+    countPublishedPosts(locale),
     getServices(locale),
   ]);
 
@@ -83,7 +83,7 @@ export default async function LocaleLayout({
         <Footer locale={locale} settings={settings} />
         {/* GA is loaded from inside CookieConsent, and only after the visitor
             accepts analytics cookies (KVKK açık rıza). */}
-        <CookieConsent gaId={gaId} labels={t.cookie} policyHref={`/${locale}/cerez-politikasi`} />
+        <CookieConsent gaId={gaId} labels={t.cookie} policyHref={localePath(locale, "cerez-politikasi")} />
         <ScrollToTop label={t.ui.back_to_top} />
       </body>
     </html>

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Reveal from "@/components/Reveal";
 import ServiceIcon from "@/components/ServiceIcon";
 import EditorialArticleBody from "@/components/EditorialArticleBody";
-import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
-import { getService, getServiceLocales, getServices } from "@/lib/content";
+import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
+import { getService, getServices, resolveServiceSlug } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -19,15 +19,14 @@ export async function generateMetadata({
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const service = await getService(locale, slug);
   if (!service) return {};
-  const available = await getServiceLocales(slug);
   return pageMetadata({
     locale,
-    path: `/services/${slug}`,
+    route: "services",
+    subPaths: service.alternates,
     title: service.title,
     description: service.summary,
     image: service.image,
     type: "article",
-    available,
   });
 }
 
@@ -40,7 +39,13 @@ export default async function ServiceDetailPage({
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const t = getDict(locale);
   const service = await getService(locale, slug);
-  if (!service) notFound();
+  // Another locale's spelling, or the name this service carried before a
+  // rename: one permanent hop to the address this locale actually uses.
+  if (!service) {
+    const current = await resolveServiceSlug(locale, slug);
+    if (current) permanentRedirect(localePath(locale, "services", current));
+    notFound();
+  }
 
   const others = (await getServices(locale)).filter((s) => s.slug !== slug).slice(0, 4);
 
@@ -56,7 +61,7 @@ export default async function ServiceDetailPage({
         <div className="relative mx-auto max-w-6xl px-5 py-16 md:py-24">
           <Reveal>
             <Link
-              href={`/${locale}/services`}
+              href={localePath(locale, "services")}
               className="inline-flex items-center gap-2 text-xs tracking-wide text-gold hover:text-ivory"
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5" aria-hidden="true">
@@ -108,7 +113,7 @@ export default async function ServiceDetailPage({
             <h2 className="mt-7 font-display text-3xl font-medium leading-[1.15] text-forest md:text-[40px]">{t.services.detail_cta_title}</h2>
             <p className="mx-auto mt-5 max-w-lg leading-[1.7] text-stone">{t.services.detail_cta_text}</p>
             <Link
-              href={`/${locale}/contact?service=${service.slug}`}
+              href={`${localePath(locale, "contact")}?service=${service.slug}`}
               className="mt-8 inline-block bg-forest px-10 py-[18px] text-xs font-semibold uppercase tracking-[0.16em] text-ivory transition-colors hover:bg-gold hover:text-forest"
             >
               {t.services.detail_cta_button}
@@ -129,7 +134,7 @@ export default async function ServiceDetailPage({
               {others.map((other) => (
                 <Link
                   key={other.slug}
-                  href={`/${locale}/services/${other.slug}`}
+                  href={localePath(locale, "services", other.slug)}
                   className="group flex items-center gap-3 rounded-lg border border-sand bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-gold/60 hover:shadow-lg hover:shadow-forest/10"
                 >
                   <span className="shrink-0 text-forest transition-colors group-hover:text-gold-dark">

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { localePath } from "@/lib/i18n";
 
 /**
  * Localized error boundary for the public site. Catches unexpected errors thrown
@@ -64,7 +65,7 @@ export default function LocaleError({
           {t.retry}
         </button>
         <Link
-          href={`/${locale}`}
+          href={localePath(locale)}
           className="rounded-md border border-sand px-7 py-3.5 text-sm font-medium text-ink transition-colors hover:border-gold"
         >
           {t.home}

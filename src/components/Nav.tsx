@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Logo from "./Logo";
-import { locales, localeNames, type Locale } from "@/lib/i18n";
+import { locales, localeNames, localePath, routeKeyFromSegment, routeSegments, type Locale } from "@/lib/i18n";
 
 type NavLabels = {
   home: string;
@@ -49,22 +49,50 @@ export default function Nav({
   }, [pathname]);
 
   const items = [
-    { href: `/${locale}`, label: labels.home },
-    { href: `/${locale}/about`, label: labels.about },
-    { href: `/${locale}/services`, label: labels.services, dropdown: true },
-    { href: `/${locale}/references`, label: labels.references },
-    ...(showBlog ? [{ href: `/${locale}/blog`, label: labels.blog }] : []),
-    { href: `/${locale}/contact`, label: labels.contact },
+    { href: localePath(locale), label: labels.home },
+    { href: localePath(locale, "about"), label: labels.about },
+    { href: localePath(locale, "services"), label: labels.services, dropdown: true },
+    { href: localePath(locale, "references"), label: labels.references },
+    ...(showBlog ? [{ href: localePath(locale, "blog"), label: labels.blog }] : []),
+    { href: localePath(locale, "contact"), label: labels.contact },
   ];
   const hasServices = services.length > 0;
 
   const isActive = (href: string) =>
-    href === `/${locale}` ? pathname === href : pathname.startsWith(href);
+    href === localePath(locale) ? pathname === href : pathname.startsWith(href);
 
-  const switchLocale = (target: string) => {
+  /**
+   * Every page already publishes each locale's own address as an hreflang
+   * alternate, and for a service or blog detail that is the only place the
+   * translated slug is known — the layout renders this nav without knowing
+   * which record the page is showing. So read them once the page is mounted.
+   */
+  const [alternates, setAlternates] = useState<Partial<Record<Locale, string>>>({});
+
+  useEffect(() => {
+    const found: Partial<Record<Locale, string>> = {};
+    for (const l of locales) {
+      const link = document.querySelector<HTMLLinkElement>(`link[rel="alternate"][hreflang="${l}"]`);
+      if (link) found[l] = new URL(link.href).pathname;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- head'deki hreflang'ları okuyup dil bağlantılarını hedef dilin gerçek adresine çeken meşru senkronizasyon
+    setAlternates(found);
+  }, [pathname]);
+
+  /**
+   * Same page, other language. Prefers the alternate above; falls back to
+   * re-spelling the route segment ("/tr/hakkimizda" → "/en/about"), which is
+   * exact for static pages and, for a detail page, still lands on the right
+   * address through that page's own 308.
+   */
+  const switchLocale = (target: Locale) => {
+    const alternate = alternates[target];
+    if (alternate) return alternate;
     const segments = pathname.split("/");
     segments[1] = target;
-    return segments.join("/") || `/${target}`;
+    const route = segments[2] ? routeKeyFromSegment(locale, segments[2]) : null;
+    if (route) segments[2] = routeSegments[route][target];
+    return segments.join("/") || localePath(target);
   };
 
   return (
@@ -76,7 +104,7 @@ export default function Nav({
       }`}
     >
       <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-5">
-        <Link href={`/${locale}`} aria-label="SAFARI CONSULTING">
+        <Link href={localePath(locale)} aria-label="SAFARI CONSULTING">
           <Logo src={logo || undefined} height={logoHeight} />
         </Link>
 
@@ -108,7 +136,7 @@ export default function Nav({
                     {services.map((s) => (
                       <Link
                         key={s.slug}
-                        href={`/${locale}/services/${s.slug}`}
+                        href={localePath(locale, "services", s.slug)}
                         className="group/svc flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13px] text-ivory/85 transition-colors hover:bg-emerald/50 hover:text-gold"
                       >
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold/50 transition-all group-hover/svc:scale-125 group-hover/svc:bg-gold motion-reduce:transition-none" />
@@ -183,7 +211,7 @@ export default function Nav({
                   {services.map((s) => (
                     <Link
                       key={s.slug}
-                      href={`/${locale}/services/${s.slug}`}
+                      href={localePath(locale, "services", s.slug)}
                       className="flex items-center gap-2 py-1.5 text-[12.5px] leading-snug text-ivory/60 transition-colors hover:text-gold"
                     >
                       <span className="h-1 w-1 shrink-0 rounded-full bg-gold/40" />

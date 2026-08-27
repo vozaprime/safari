@@ -14,7 +14,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
-  return pageMetadata({ locale, path: "/cerez-politikasi", title: cookiePolicy[locale].title });
+  return pageMetadata({ locale, route: "cerez-politikasi", title: cookiePolicy[locale].title });
 }
 
 export default async function CookiePolicyPage({

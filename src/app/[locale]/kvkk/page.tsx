@@ -14,7 +14,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
-  return pageMetadata({ locale, path: "/kvkk", title: kvkkNotice[locale].title });
+  return pageMetadata({ locale, route: "kvkk", title: kvkkNotice[locale].title });
 }
 
 export default async function KvkkPage({

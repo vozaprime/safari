@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Reveal from "@/components/Reveal";
 import EditorialArticleBody from "@/components/EditorialArticleBody";
-import { defaultLocale, getDict, isLocale, type Locale } from "@/lib/i18n";
-import { getPost, getPostLocales, getPosts } from "@/lib/content";
+import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
+import { getPost, getPosts, resolvePostSlug } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -18,15 +18,14 @@ export async function generateMetadata({
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const post = await getPost(locale, slug);
   if (!post) return {};
-  const available = await getPostLocales(slug);
   return pageMetadata({
     locale,
-    path: `/blog/${slug}`,
+    route: "blog",
+    subPaths: post.alternates,
     title: post.title,
     description: post.excerpt,
     image: post.cover || undefined,
     type: "article",
-    available,
   });
 }
 
@@ -37,7 +36,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const t = getDict(locale);
   const post = await getPost(locale, slug);
-  if (!post) notFound();
+  // See the service page: a foreign or stale slug gets one permanent hop.
+  if (!post) {
+    const current = await resolvePostSlug(locale, slug);
+    if (current) permanentRedirect(localePath(locale, "blog", current));
+    notFound();
+  }
 
   const others = (await getPosts(locale)).filter((p) => p.slug !== slug).slice(0, 3);
 
@@ -53,7 +57,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
         )}
         <div className="relative mx-auto max-w-3xl px-5 py-16 md:py-24">
           <Reveal>
-            <Link href={`/${locale}/blog`} className="inline-flex items-center gap-2 text-xs tracking-wide text-gold hover:text-ivory">
+            <Link href={localePath(locale, "blog")} className="inline-flex items-center gap-2 text-xs tracking-wide text-gold hover:text-ivory">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5" aria-hidden="true">
                 <path d="M19 12H5M11 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -78,7 +82,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
             <h2 className="font-display text-2xl text-forest">{t.blog.related}</h2>
             <div className="mt-6 grid gap-6 sm:grid-cols-3">
               {others.map((p) => (
-                <Link key={p.slug} href={`/${locale}/blog/${p.slug}`} className="group rounded-lg border border-sand p-5 transition-colors hover:border-gold/60">
+                <Link key={p.slug} href={localePath(locale, "blog", p.slug)} className="group rounded-lg border border-sand p-5 transition-colors hover:border-gold/60">
                   <h3 className="font-display text-base text-ink group-hover:text-forest">{p.title}</h3>
                   {p.excerpt && <p className="mt-2 line-clamp-2 text-sm text-stone">{p.excerpt}</p>}
                 </Link>

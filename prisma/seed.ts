@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { serviceSlugs } from "../scripts/content/slugs";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -468,10 +469,13 @@ async function main() {
     });
     for (const locale of ["tr", "en", "ru"] as const) {
       const t = s[locale];
+      // Per-locale URL name, so a fresh `npm run setup` already produces the
+      // localized addresses the site links to; null falls back to `s.slug`.
+      const slug = serviceSlugs[s.slug]?.[locale] ?? null;
       await prisma.serviceTranslation.upsert({
         where: { serviceId_locale: { serviceId: svc.id, locale } },
-        update: { title: t.title, summary: t.summary, description: t.description, scope: JSON.stringify(t.scope) },
-        create: { serviceId: svc.id, locale, title: t.title, summary: t.summary, description: t.description, scope: JSON.stringify(t.scope) },
+        update: { title: t.title, summary: t.summary, description: t.description, scope: JSON.stringify(t.scope), slug },
+        create: { serviceId: svc.id, locale, title: t.title, summary: t.summary, description: t.description, scope: JSON.stringify(t.scope), slug },
       });
     }
   }

@@ -22,6 +22,7 @@ import {
   consumeBackupCode,
 } from "@/lib/totp";
 import { sendMail } from "@/lib/mail";
+import { SITE_URL } from "@/lib/seo";
 
 async function requireSession() {
   const session = await getVerifiedSession();
@@ -197,11 +198,10 @@ export async function requestPasswordResetAction(formData: FormData) {
       where: { id: user.id },
       data: { resetToken: token, resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000) },
     });
-    const base = process.env.SITE_URL || "http://localhost:3000";
     await sendMail({
       to: email,
       subject: "SAFARI CONSULTING — Şifre sıfırlama",
-      text: `Şifrenizi sıfırlamak için (1 saat geçerli):\n\n${base}/admin/reset/${token}\n\nBu isteği siz yapmadıysanız yok sayabilirsiniz.`,
+      text: `Şifrenizi sıfırlamak için (1 saat geçerli):\n\n${SITE_URL}/admin/reset/${token}\n\nBu isteği siz yapmadıysanız yok sayabilirsiniz.`,
     });
     await logAudit(email, "reset_request", "auth");
   }
@@ -329,6 +329,52 @@ export async function disableUserTwoFactorAction(userId: number) {
   redirect("/admin/users?toast=2fa_reset");
 }
 
+/**
+ * The per-locale URL name submitted for one language tab, normalised.
+ *
+ * Returns null when the field is left empty — that is the documented "fall back
+ * to the record's shared slug" state, and null is also what keeps the
+ * `@@unique([locale, slug])` index happy when several records have no name of
+ * their own. A slug already taken by another record in the same language is
+ * rejected (kept as-is) rather than allowed to blow up the save.
+ */
+async function localeSlugFor(
+  entity: "service" | "post",
+  formData: FormData,
+  locale: string,
+  ownerId: number
+): Promise<string | null> {
+  const raw = String(formData.get(`${locale}_slug`) ?? "").trim();
+  if (!raw) return null;
+  const slug = slugify(raw);
+  if (!slug) return null;
+
+  const clash =
+    entity === "service"
+      ? await prisma.serviceTranslation.findFirst({
+          where: { locale, slug, NOT: { serviceId: ownerId } },
+          select: { id: true },
+        })
+      : await prisma.postTranslation.findFirst({
+          where: { locale, slug, NOT: { postId: ownerId } },
+          select: { id: true },
+        });
+  if (clash) {
+    const current =
+      entity === "service"
+        ? await prisma.serviceTranslation.findUnique({
+            where: { serviceId_locale: { serviceId: ownerId, locale } },
+            select: { slug: true },
+          })
+        : await prisma.postTranslation.findUnique({
+            where: { postId_locale: { postId: ownerId, locale } },
+            select: { slug: true },
+          });
+    return current?.slug ?? null;
+  }
+  return slug;
+}
+
 /* ---------------- Services ---------------- */
 
 export async function updateServiceAction(serviceId: number, formData: FormData) {
@@ -351,10 +397,11 @@ export async function updateServiceAction(serviceId: number, formData: FormData)
     const scopeRaw = String(formData.get(`${locale}_scope`) ?? "");
     const scope = JSON.stringify(scopeRaw.split("\n").map((l) => l.trim()).filter(Boolean));
     if (!title) continue;
+    const slug = await localeSlugFor("service", formData, locale, serviceId);
     await prisma.serviceTranslation.upsert({
       where: { serviceId_locale: { serviceId, locale } },
-      update: { title, summary, description, scope },
-      create: { serviceId, locale, title, summary, description, scope },
+      update: { title, summary, description, scope, slug },
+      create: { serviceId, locale, title, summary, description, scope, slug },
     });
   }
 
@@ -733,10 +780,11 @@ export async function updatePostAction(id: number, formData: FormData) {
     const excerpt = String(formData.get(`${locale}_excerpt`) ?? "").trim();
     const body = normalizeText(String(formData.get(`${locale}_body`) ?? "")).trim();
     if (!title) continue;
+    const slug = await localeSlugFor("post", formData, locale, id);
     await prisma.postTranslation.upsert({
       where: { postId_locale: { postId: id, locale } },
-      update: { title, excerpt, body },
-      create: { postId: id, locale, title, excerpt, body },
+      update: { title, excerpt, body, slug },
+      create: { postId: id, locale, title, excerpt, body, slug },
     });
   }
   await logAudit(session.email, "update", "post", `#${id}`);

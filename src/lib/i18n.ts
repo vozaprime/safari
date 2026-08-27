@@ -426,3 +426,54 @@ const dictionaries: Record<Locale, typeof tr> = { tr, en, ru };
 export function getDict(locale: Locale) {
   return dictionaries[locale] ?? dictionaries[defaultLocale];
 }
+
+/**
+ * Visitor-facing URL segment for each public route, per locale.
+ *
+ * The KEY is the physical folder under `src/app/[locale]` (the canonical,
+ * internal name); the VALUE is what the visitor actually sees in the address
+ * bar. `proxy.ts` rewrites the localized segment back to the folder name on the
+ * way in and 308-redirects any other locale's spelling to the right one, so the
+ * route folders never have to be duplicated per language.
+ *
+ * Adding a segment here is enough to localize a route — but remember the old
+ * URL keeps working only because the reverse lookup below still knows it.
+ */
+export const routeSegments = {
+  about: { tr: "hakkimizda", en: "about", ru: "o-nas" },
+  services: { tr: "hizmetlerimiz", en: "services", ru: "uslugi" },
+  references: { tr: "referanslarimiz", en: "references", ru: "referensy" },
+  blog: { tr: "blog", en: "blog", ru: "blog" },
+  contact: { tr: "iletisim", en: "contact", ru: "kontakty" },
+  "cerez-politikasi": { tr: "cerez-politikasi", en: "cookie-policy", ru: "politika-cookie" },
+  kvkk: { tr: "kvkk", en: "data-protection", ru: "zashchita-dannykh" },
+} as const satisfies Record<string, Record<Locale, string>>;
+
+export type RouteKey = keyof typeof routeSegments;
+
+const routeKeys = Object.keys(routeSegments) as RouteKey[];
+
+export function isRouteKey(value: string): value is RouteKey {
+  return routeKeys.includes(value as RouteKey);
+}
+
+/**
+ * Visitor-facing path for a route. `subPath` carries the dynamic tail (a
+ * service or post slug), which stays in its original language for now.
+ *
+ *   localePath("tr")                        → "/tr"
+ *   localePath("ru", "about")               → "/ru/o-nas"
+ *   localePath("tr", "services", "x-slug")  → "/tr/hizmetlerimiz/x-slug"
+ */
+export function localePath(locale: Locale, route?: RouteKey, subPath?: string): string {
+  const base = route ? `/${locale}/${routeSegments[route][locale]}` : `/${locale}`;
+  return subPath ? `${base}/${subPath}` : base;
+}
+
+/** The route a visitor-facing segment belongs to in `locale`, or null. */
+export function routeKeyFromSegment(locale: Locale, segment: string): RouteKey | null {
+  for (const key of routeKeys) {
+    if (routeSegments[key][locale] === segment) return key;
+  }
+  return null;
+}

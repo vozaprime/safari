@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { slugIn } from "@/lib/content";
+import { localePath } from "@/lib/i18n";
 import { PageHeader, AdminCard, inputClass, labelClass, Field } from "@/components/admin/ui";
 import SubmitButton from "@/components/admin/SubmitButton";
 import Uploader from "@/components/admin/Uploader";
@@ -31,7 +33,7 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
       </Link>
       <PageHeader title={`Hizmeti düzenle — ${byLocale.tr?.title ?? service.slug}`}>
         <Link
-          href={`/tr/services/${service.slug}`}
+          href={localePath("tr", "services", slugIn(service.slug, service.translations, "tr"))}
           target="_blank"
           className="inline-flex items-center gap-1.5 rounded-md border border-sand px-3 py-2 text-xs text-forest hover:border-gold/60"
         >
@@ -74,6 +76,13 @@ export default async function EditServicePage({ params }: { params: Promise<{ id
               <div className="mt-4 space-y-4">
                 <Field label="Başlık" htmlFor={`${locale}_title`}>
                   <input id={`${locale}_title`} name={`${locale}_title`} defaultValue={tr?.title ?? ""} className={inputClass} />
+                </Field>
+                <Field
+                  label="URL adı (bu dilde)"
+                  htmlFor={`${locale}_slug`}
+                  hint="boş bırakılırsa ortak URL adı kullanılır; değiştirirseniz eski adres kalıcı olarak yenisine yönlenir"
+                >
+                  <input id={`${locale}_slug`} name={`${locale}_slug`} defaultValue={tr?.slug ?? ""} className={inputClass} />
                 </Field>
                 <Field label="Kısa özet (kartlarda görünür)" htmlFor={`${locale}_summary`}>
                   <textarea id={`${locale}_summary`} name={`${locale}_summary`} rows={2} defaultValue={tr?.summary ?? ""} className={inputClass} />

@@ -46,6 +46,8 @@ npx tsx scripts/check-posts.ts             # blog denetimi — DB'ye dokunmaz
 npx tsx scripts/apply-posts.ts             # kuru çalışma, ne yapacağını yazar
 npx tsx scripts/apply-posts.ts --publish   # uygular ve yayına alır (--draft ile taslak)
 npx tsx scripts/apply-descriptions.ts      # hizmet açıklamalarını uygular
+npx tsx scripts/apply-slugs.ts             # dil slug'ları — kuru çalışma
+npx tsx scripts/apply-slugs.ts --publish   # dil slug'larını yazar
 npx tsx scripts/check-richtext-images.ts   # mini-markdown ayrıştırıcı testleri
 ```
 
@@ -65,7 +67,7 @@ aynı görsellerin kullanılması. **Yayın öncesi çalıştırın** — hata v
 |---|---|
 | `DATABASE_URL` | PostgreSQL bağlantı dizesi (`postgres://…?sslmode=require`) |
 | `SESSION_SECRET` | Oturum imza anahtarı — üretimde rastgele ve gizli olmalı |
-| `SITE_URL` | Yayın adresi; canonical/hreflang, OpenGraph, sitemap ve şifre sıfırlama bağlantıları bunu kullanır |
+| `SITE_URL` | Yayın adresi; canonical/hreflang, OpenGraph, sitemap ve şifre sıfırlama bağlantıları bunu kullanır. Boş bırakılırsa üretimde `https://www.safarict.com`, yerelde `http://localhost:3000` kullanılır; üretimde `*.vercel.app` değeri **yok sayılır** (bkz. `src/lib/seo.ts`) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob erişimi (medya yükleme). Blob store **public** olmalı |
 
 ## Adresler
@@ -74,12 +76,42 @@ aynı görsellerin kullanılması. **Yayın öncesi çalıştırın** — hata v
 |---|---|
 | `/` | Ziyaretçinin tarayıcı diline yönlendirir |
 | `/tr` · `/en` · `/ru` | Ana sayfa (üç dil) |
-| `/{dil}/about` · `/services` · `/services/{slug}` · `/references` · `/blog` · `/blog/{slug}` · `/contact` | İçerik sayfaları |
-| `/{dil}/kvkk` · `/{dil}/cerez-politikasi` | KVKK aydınlatma metni ve çerez politikası |
+| İçerik sayfaları | Her dil kendi yazımını kullanır — aşağıdaki tabloya bakın |
+| `/{dil}/{hizmet-yolu}/{slug}` · `/{dil}/{blog-yolu}/{slug}` | Hizmet ve blog detayları — slug da dile göre değişir |
 | `/admin` | Yönetim paneli (giriş, 2FA, şifre sıfırlama dahil) |
 | `/sitemap.xml` · `/robots.txt` | Otomatik üretilir |
 
-Erişim kontrolü `src/proxy.ts` içindedir (Next 16'da `middleware.ts` yerine `proxy.ts`).
+Yol adları dile göre değişir; tek kaynak `routeSegments` (`src/lib/i18n.ts`):
+
+| Rota | tr | en | ru |
+|---|---|---|---|
+| Hakkımızda | `hakkimizda` | `about` | `o-nas` |
+| Hizmetler | `hizmetlerimiz` | `services` | `uslugi` |
+| Referanslar | `referanslarimiz` | `references` | `referensy` |
+| Blog | `blog` | `blog` | `blog` |
+| İletişim | `iletisim` | `contact` | `kontakty` |
+| Çerez politikası | `cerez-politikasi` | `cookie-policy` | `politika-cookie` |
+| KVKK | `kvkk` | `data-protection` | `zashchita-dannykh` |
+
+Rota klasörleri (`src/app/[locale]/…`) İngilizce adlarında kalır; `src/proxy.ts`
+ziyaretçinin gördüğü yolu klasör adına **rewrite** eder ve başka bir dilin
+yazımıyla gelen adresleri (ör. eski `/tr/about`) **308** ile doğru yola
+yönlendirir. Link üretirken yolu elle yazmayın — `localePath(locale, "about")`
+kullanın; canonical/hreflang ve sitemap da aynı kaynaktan beslenir.
+
+Hizmet ve yazı slug'ları da dile göredir; bunlar veritabanında durur
+(`ServiceTranslation.slug` / `PostTranslation.slug`) ve panelde her dil
+sekmesinde **URL adı** alanından düzenlenir. Alan boşsa kaydın ortak slug'ı
+kullanılır. Bir dilin tanımadığı slug (başka dilin yazımı ya da yeniden
+adlandırmadan önceki ad) sayfada **308** ile doğru adrese gider — örnek:
+`/en/services/mali-danismanlik` → `/en/services/financial-advisory`.
+
+Mevcut 26 kaydın dil slug'ları `scripts/content/slugs.ts` içinde tanımlıdır;
+`scripts/apply-slugs.ts` bunları veritabanına yazar (varsayılan kuru çalışma,
+yazmak için `--publish`). `prisma/seed.ts` ve `scripts/apply-posts.ts` de aynı
+kaynaktan beslenir, böylece sıfırdan kurulum da yerelleştirilmiş adres üretir.
+
+Erişim kontrolü de `src/proxy.ts` içindedir (Next 16'da `middleware.ts` yerine `proxy.ts`).
 
 ## Yönetim paneli
 
