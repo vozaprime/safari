@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { toSocialHref } from "@/lib/url";
 
 /**
  * Renders social-media icon links for whichever platform URLs are set in
@@ -76,7 +77,9 @@ export default function SocialLinks({
   label?: string;
   className?: string;
 }) {
-  const active = PLATFORMS.filter((p) => settings[p.key]?.trim());
+  const active = PLATFORMS.map((p) => ({ ...p, href: toSocialHref(settings[p.key]) })).filter(
+    (p): p is Platform & { href: string } => p.href !== null
+  );
   if (active.length === 0) return null;
 
   return (
@@ -86,7 +89,7 @@ export default function SocialLinks({
         {active.map((p) => (
           <a
             key={p.key}
-            href={settings[p.key].trim()}
+            href={p.href}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={p.label}
