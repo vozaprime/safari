@@ -170,7 +170,9 @@ Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayın
 
 - **Yerel ve canlı aynı veritabanını paylaşır** — şema değişikliği her iki ortamı da etkiler
 - **Menüdeki Blog linki koşulludur** — yayında hiç yazı yoksa (`published=true` ve arşivlenmemiş) link hiç render edilmez (`src/app/[locale]/layout.tsx` → `showBlog`). Link "kayboldu" diyorsanız önce yazıların yayın durumuna bakın
-- **`next dev`/`next start` çalışırken `prisma generate`** DLL kilidi (EPERM) verir; önce Next süreçlerini kapatın
+- **`next dev`/`next start` çalışırken `prisma generate`** DLL kilidi (EPERM) verir; önce Next süreçlerini kapatın. `npm run build` bu durumda `prisma generate` aşamasında durur ve `next build` hiç çalışmaz — "build geçti" sanıp eski `.next` çıktısını test etmemek için logda `EPERM` arayın
+- **`package.json` → `overrides` bloğu güvenlik içindir** — `zod` ve `deepmerge-ts`, üst paketlerin (`@vercel/blob` → `@vercel/oidc` → `@vercel/cli-config` ve `prisma` → `@prisma/config`) zafiyetli sürümlere bağlı kalması yüzünden elle yukarı sabitlendi. Üst paketler kendi bağımlılıklarını güncelleyince bu blok kaldırılabilir; kaldırmadan önce `npm audit --omit=dev` ile doğrulayın
+- **Ana sayfanın `<title>`'ı elle verilir** — projede kök `layout.tsx` yoktur; `[locale]/layout.tsx` hem `<html>`'i basar hem `title.default`/`title.template`'i tanımlar. Next bu ikisini yalnızca ALT segmentlere uygular, aynı segmentteki `[locale]/page.tsx`'e uygulamaz. Ana sayfa başlığını bu yüzden `generateMetadata` içinde açıkça verir; şablon uygulanmadığı için değer **tam başlık** olmalıdır
 - **Form metinleri CRLF gelir** — `src/lib/richtext.tsx` ve server action'lar `\r\n` → `\n` normalize eder
 - **`site_logo` ayarı doluysa** yerleşik `/brand/logo.png` ezilir
 - **Worktree'lerin kendi `node_modules`'u yoktur** (ana depoyu paylaşırlar); Turbopack build orada kök hatası verebilir
