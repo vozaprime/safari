@@ -12,7 +12,7 @@ import ProcessStory, { type StoryStep } from "@/components/ProcessStory";
 import ServiceUniverse, { type UniverseGroup } from "@/components/ServiceUniverse";
 import { ProseText } from "@/lib/richtext";
 import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
-import { getPageContent, getReferences, getServices } from "@/lib/content";
+import { getPageContent, getReferences, getServices, getSettings } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
-  return pageMetadata({ locale });
+  // Ana sayfa, `title.default`/`title.template`'i tanımlayan `[locale]/layout.tsx`
+  // ile AYNI segmentte. Next bu ikisini yalnızca ALT segmentlere uygular, bu yüzden
+  // ana sayfa kendi başlığını vermezse hiç <title> almaz. Başlığı burada açıkça
+  // veriyoruz; şablon uygulanmadığı için değer tam başlık olmalı.
+  const settings = await getSettings();
+  return pageMetadata({ locale, title: settings.seo_title || "SAFARI CONSULTING" });
 }
 
 const CHAPTER_MEDIA: StoryStep["media"][] = [

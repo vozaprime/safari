@@ -41,6 +41,7 @@ export default function CookieConsent({
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage yalnızca istemcide okunur; ilk boyama sunucuyla eşleşsin diye gerçek karar bilerek effect içinde veriliyor (hidrasyon uyuşmazlığını önler)
     setDecision(stored === "accepted" || stored === "rejected" ? stored : "prompt");
 
     const reopen = () => setDecision("prompt");

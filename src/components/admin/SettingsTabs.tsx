@@ -74,6 +74,7 @@ export default function SettingsTabs({ tabs }: { tabs: SettingsTab[] }) {
     }
     const next =
       fromHash || (tabs.some((t) => t.id === stored) ? stored : null) || tabs[0]?.id;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- aktif sekme URL hash'i ve localStorage'dan geliyor; ikisi de yalnızca istemcide okunur, ilk sekme seçimi bu yüzden effect içinde
     if (next) setActive(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

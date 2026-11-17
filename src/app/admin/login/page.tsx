@@ -41,7 +41,6 @@ export default async function LoginPage({
       <div aria-hidden="true" className="absolute inset-0">
         <picture>
           <source srcSet="/images/heroes/admin-login.webp" type="image/webp" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/heroes/admin-login.jpg"
             alt=""
