@@ -169,16 +169,18 @@ kaydırma, "başa dön" geçişleri). Buton ve bağlantılarda görünür odak h
 
 ## Yayına alma (deploy)
 
-`main` dalına yapılan merge Vercel'de production deploy'u tetikler. 17 Kasım 2026'da
-PR #6 + #7 merge edildiğinde doğrulandı: hiçbir CLI komutu çalıştırılmadan PR #7'nin
-`Cache-Control` kuralları canlıya çıktı.
+Deploy elle yapılır. PowerShell 5.1'de `&&` **çalışmaz**, ayırıcı `;` kullanın:
 
-Elle deploy gerekirse (git'e girmeyen bir dosyayı yüklemek gibi):
-
-```bash
-git pull --ff-only                  # ana dizinde
-npx vercel deploy --prod --yes      # ANA dizinden çalıştırın, worktree'den değil
+```powershell
+Set-Location "D:\PROJELER\SAFARI CONSULTING"; git pull --ff-only; npx vercel deploy --prod --yes
 ```
+
+**Deploy yerel dosyalarınızı değil, deponun production dalını (`main`) yayına alır.**
+Proje `.vercel/repo.json` ile repo seviyesinde bağlı; 17 Kasım 2026'da worktree'den
+yapılan bir `vercel deploy --prod` sonrası canlıya `main`'in ağacı çıktı — o worktree'de
+bulunan PR #8 kodu canlıda görünmedi, buna karşılık `main`'de merge edilmiş PR #7
+görünüyordu. Sonuç: **yalnızca commit edilmiş dosyalar yayına gider.** Commit edilmemiş
+bir değişikliği veya gitignore'lu bir dosyayı deploy ederek canlıya çıkaramazsınız.
 
 **Sahne videoları git'tedir.** `.gitignore` ham medyayı (`*.mp4`, `*.mov`, `*.wav`,
 `*.m4a`) yoksayar, ancak `!public/videos/*.mp4` istisnası altı sahne videosunu depoda
