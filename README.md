@@ -169,18 +169,23 @@ kaydırma, "başa dön" geçişleri). Buton ve bağlantılarda görünür odak h
 
 ## Yayına alma (deploy)
 
-Deploy elle yapılır. PowerShell 5.1'de `&&` **çalışmaz**, ayırıcı `;` kullanın:
+`main` dalına yapılan merge **otomatik production deploy tetikler.** Doğrulama
+(2026-11-17 16:23 UTC): PR #9 merge edildikten 1-2 dakika sonra, yalnızca o merge
+commit'inde bulunan altı video canlıda 200 ve doğru byte boyutlarıyla servis edilmeye
+başladı; hiçbir CLI komutu çalıştırılmadı.
+
+Elle deploy de mümkün. PowerShell 5.1'de `&&` **çalışmaz**, ayırıcı `;` kullanın:
 
 ```powershell
 Set-Location "D:\PROJELER\SAFARI CONSULTING"; git pull --ff-only; npx vercel deploy --prod --yes
 ```
 
-**Deploy yerel dosyalarınızı değil, deponun production dalını (`main`) yayına alır.**
-Proje `.vercel/repo.json` ile repo seviyesinde bağlı; 17 Kasım 2026'da worktree'den
-yapılan bir `vercel deploy --prod` sonrası canlıya `main`'in ağacı çıktı — o worktree'de
-bulunan PR #8 kodu canlıda görünmedi, buna karşılık `main`'de merge edilmiş PR #7
-görünüyordu. Sonuç: **yalnızca commit edilmiş dosyalar yayına gider.** Commit edilmemiş
-bir değişikliği veya gitignore'lu bir dosyayı deploy ederek canlıya çıkaramazsınız.
+**Her iki yolda da build kaynağı depodur, çalışma dizininiz değil.** Proje
+`.vercel/repo.json` ile repo seviyesinde bağlı. 17 Kasım 2026 16:11'de worktree içinden
+elle çalıştırılan bir deploy'dan sonra canlıya `main`'in ağacı çıktı: o worktree'de duran
+PR #8 kodu canlıda görünmedi, `main`'de merge edilmiş PR #7 göründü. Sonuç: **yalnızca
+commit edilmiş dosyalar yayına gider.** Commit edilmemiş bir değişikliği veya gitignore'lu
+bir dosyayı deploy ederek canlıya çıkaramazsınız.
 
 **Sahne videoları git'tedir.** `.gitignore` ham medyayı (`*.mp4`, `*.mov`, `*.wav`,
 `*.m4a`) yoksayar, ancak `!public/videos/*.mp4` istisnası altı sahne videosunu depoda
