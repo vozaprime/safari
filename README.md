@@ -169,19 +169,35 @@ kaydırma, "başa dön" geçişleri). Buton ve bağlantılarda görünür odak h
 
 ## Yayına alma (deploy)
 
-> ⚠️ **Vercel projesi bu GitHub reposuna BAĞLI DEĞİL.** `main`'e merge etmek production'a
-> hiçbir şey çıkarmaz. Deploy ayrı ve elle bir adımdır.
+Deploy elle yapılır. PowerShell 5.1'de `&&` **çalışmaz**, ayırıcı `;` kullanın:
 
-```bash
-git pull --ff-only                  # ana dizinde
-npx vercel deploy --prod --yes      # ANA dizinden çalıştırın, worktree'den değil
+```powershell
+Set-Location "D:\PROJELER\SAFARI CONSULTING"; git pull --ff-only; npx vercel deploy --prod --yes
 ```
 
-**Neden ana dizin:** `.gitignore` tüm `*.mp4`/`*.mov`/`*.wav` dosyalarını yoksayar.
-`public/videos/*.mp4` git'te değildir, yalnızca ana dizinde bulunur ve Vercel CLI çalışma
-dizinindeki dosyaları yükler. Worktree'den deploy edilirse videolar production'da 404 olur.
+**Deploy yerel dosyalarınızı değil, deponun production dalını (`main`) yayına alır.**
+Proje `.vercel/repo.json` ile repo seviyesinde bağlı; 17 Kasım 2026'da worktree'den
+yapılan bir `vercel deploy --prod` sonrası canlıya `main`'in ağacı çıktı — o worktree'de
+bulunan PR #8 kodu canlıda görünmedi, buna karşılık `main`'de merge edilmiş PR #7
+görünüyordu. Sonuç: **yalnızca commit edilmiş dosyalar yayına gider.** Commit edilmemiş
+bir değişikliği veya gitignore'lu bir dosyayı deploy ederek canlıya çıkaramazsınız.
 
-Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayında" aynı şey değildir.
+**Sahne videoları git'tedir.** `.gitignore` ham medyayı (`*.mp4`, `*.mov`, `*.wav`,
+`*.m4a`) yoksayar, ancak `!public/videos/*.mp4` istisnası altı sahne videosunu depoda
+tutar. Bunlar yayının parçasıdır: depoda olmazlarsa git kaynaklı deploy onları götürmez
+ve ana sayfa ile Hakkımızda'daki video alanları boşalır. 17 Kasım 2026'da tam olarak bu
+oldu — `/videos/*.mp4` adresleri videonun yerine 404 sayfasının HTML'ini döndürdü.
+
+`public/videos/` altına yeni video eklerken dosyayı **commit edin.** İstisna yalnızca bu
+klasörün birinci seviyesini ve `.mp4` uzantısını kapsar; alt klasörler ve `.mov` dışındadır.
+
+Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayında" aynı şey değildir:
+
+```bash
+curl -sI https://www.safarict.com/videos/about-hero.mp4 | grep -i content-type
+```
+
+`video/mp4` görmelisiniz. `text/html` dosyanın deploy'a girmediği anlamına gelir.
 
 ## Bilinen tuzaklar
 
@@ -190,5 +206,6 @@ Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayın
 - **`next dev`/`next start` çalışırken `prisma generate`** DLL kilidi (EPERM) verir; önce Next süreçlerini kapatın
 - **Form metinleri CRLF gelir** — `src/lib/richtext.tsx` ve server action'lar `\r\n` → `\n` normalize eder
 - **`site_logo` ayarı doluysa** yerleşik `/brand/logo.png` ezilir
+- **Worktree'de `.env` yoktur** — gitignore'lu olduğu için her yeni worktree'ye ana dizinden elle kopyalanır; yoksa Prisma `DATABASE_URL` bulamaz
 - **Worktree'lerin kendi `node_modules`'u yoktur** (ana depoyu paylaşırlar); Turbopack build orada kök hatası verebilir
 - **`Dockerfile` güncel değildir** — SQLite dönemine aittir ve her başlatmada `db push` + `seed` çalıştırır. Paylaşılan PostgreSQL ile bu yıkıcıdır; kullanmadan önce gözden geçirin. Güncel yayın yolu Vercel'dir.
