@@ -50,6 +50,9 @@ npx tsx scripts/apply-about.ts             # kuru çalışma (--write ile Hakkı
 npx tsx scripts/apply-slugs.ts             # dil slug'ları — kuru çalışma
 npx tsx scripts/apply-slugs.ts --publish   # dil slug'larını yazar
 npx tsx scripts/check-richtext-images.ts   # mini-markdown ayrıştırıcı testleri
+npx tsx scripts/check-story-scenes.ts      # sahne/şerit/ilerleme mantığı testleri
+npx tsx scripts/check-story-scroll.ts      # StoryScroll işaretleme testleri (react-dom/server)
+npx tsx scripts/check-apply-about.ts       # Hakkımızda gövde doğrulayıcısı testleri
 ```
 
 `check-posts.ts` şunları doğrular: dil başına en az 300 kelime, her dilde 3+ başlık ·

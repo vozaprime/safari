@@ -5,9 +5,15 @@
 //   npx tsx scripts/apply-about.ts --write    → uygular
 //
 // DATABASE_URL ortamda tanımlı olmalıdır (.env varsa Prisma kendisi yükler).
+//
+// Yazma, üç dilin TAMAMI doğrulandıktan SONRA tek blokta yapılır. Denetim ve
+// yazmanın aynı döngüde olduğu sürüm, tr'ye yazdıktan sonra en'de durabiliyor
+// ve yine de "hiçbir şey yazılmadı" diyordu; yerel ve canlı aynı veritabanını
+// paylaştığı için bu, canlı içeriğin dillere göre ayrışması demekti.
 import { PrismaClient } from "@prisma/client";
 import { parseBlocks } from "../src/lib/richtext";
 import { aboutBody } from "./content/about";
+import { allProblems } from "./content/validate-about";
 
 const LOCALES = ["tr", "en", "ru"] as const;
 const KEY = "about_body";
@@ -21,47 +27,51 @@ async function main() {
   console.log(write ? "UYGULANIYOR (DB'ye yazılıyor)" : "KURU ÇALIŞMA (DB'ye yazılmıyor)");
   console.log("");
 
-  let failures = 0;
+  const bodies = Object.fromEntries(LOCALES.map((l) => [l, aboutBody[l].trim()]));
 
+  // 1) Önce hepsini denetle.
+  const problems = allProblems(bodies);
+
+  // 2) Ne yapılacağını raporla.
   for (const locale of LOCALES) {
-    const value = aboutBody[locale].trim();
-    const blocks = parseBlocks(value);
-    const paras = blocks.filter((b) => b.kind === "para").length;
-
-    // Gövde düz paragraflardan oluşmalı: başlık/liste/alıntı/görsel beklemiyoruz.
-    const unexpected = blocks.filter((b) => b.kind !== "para");
-    if (unexpected.length) {
-      console.error(`  ! ${locale}: beklenmeyen blok türü: ${unexpected.map((b) => b.kind).join(", ")}`);
-      failures++;
-    }
-    if (paras < 5) {
-      console.error(`  ! ${locale}: yalnızca ${paras} paragraf, en az 5 bekleniyor`);
-      failures++;
-    }
-
+    const value = bodies[locale];
+    const paragraphs = parseBlocks(value).filter((b) => b.kind === "para").length;
     const existing = await prisma.pageContent.findUnique({
       where: { key_locale: { key: KEY, locale } },
     });
-    const durum = existing ? (existing.value.trim() === value ? "değişiklik yok" : "güncellenecek") : "oluşturulacak";
-    console.log(`  ${locale}: ${words(value)} kelime, ${paras} paragraf — ${durum}`);
-    if (existing && existing.value.trim() !== value) {
-      console.log(`       (mevcut: ${words(existing.value)} kelime, ${parseBlocks(existing.value).length} blok)`);
+    const durum = existing
+      ? existing.value.trim() === value
+        ? "değişiklik yok"
+        : "güncellenecek"
+      : "oluşturulacak";
+    console.log(`  ${locale}: ${words(value)} kelime, ${paragraphs} paragraf — ${durum}`);
+    for (const p of problems.filter((x) => x.locale === locale)) {
+      console.error(`       ! ${p.problem}`);
     }
-
-    if (!write || failures) continue;
-    await prisma.pageContent.upsert({
-      where: { key_locale: { key: KEY, locale } },
-      create: { key: KEY, locale, value },
-      update: { value },
-    });
   }
 
-  if (failures) {
-    console.error(`\n${failures} sorun bulundu, hiçbir şey yazılmadı.`);
+  if (problems.length) {
+    console.error(`\n${problems.length} sorun bulundu, hiçbir şey yazılmadı.`);
     process.exitCode = 1;
     return;
   }
-  console.log(write ? "\nUygulandı." : "\nHiçbir şey yazılmadı. Uygulamak için --write ekleyin.");
+
+  if (!write) {
+    console.log("\nHiçbir şey yazılmadı. Uygulamak için --write ekleyin.");
+    return;
+  }
+
+  // 3) Yalnızca hepsi geçerliyse yaz; üçü tek işlemde, yarım kalmasın.
+  await prisma.$transaction(
+    LOCALES.map((locale) =>
+      prisma.pageContent.upsert({
+        where: { key_locale: { key: KEY, locale } },
+        create: { key: KEY, locale, value: bodies[locale] },
+        update: { value: bodies[locale] },
+      })
+    )
+  );
+  console.log("\nUygulandı.");
 }
 
 main()

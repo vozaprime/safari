@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import Reveal from "./Reveal";
 import { renderInline, type RichBlock } from "@/lib/richtext";
-import { bandIndices } from "@/lib/storyScenes";
+import { bandIndices, stickyProgress, type Scene } from "@/lib/storyScenes";
 import { useScrollStage } from "@/lib/useScrollProgress";
 
 /**
@@ -28,17 +28,32 @@ export default function StoryScroll({
   chapterLabel,
 }: {
   blocks: RichBlock[];
-  scenes: string[];
+  scenes: Scene[];
   kicker: string;
   title: string;
   chapterLabel: string;
 }) {
   const barRef = useRef<HTMLSpanElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const sceneCount = Math.max(1, scenes.length);
 
-  const { ref, active } = useScrollStage<HTMLDivElement>(sceneCount, (progress) => {
-    if (barRef.current) barRef.current.style.transform = `scaleY(${progress.toFixed(4)})`;
-  });
+  const { ref, active } = useScrollStage<HTMLElement>(
+    sceneCount,
+    (progress) => {
+      if (barRef.current) barRef.current.style.transform = `scaleY(${progress.toFixed(4)})`;
+    },
+    // Varsayilan olcu kendini sabitleyen uzun kapsayicilar icindir; burada
+    // bolum dogal yukseklikte ve yalnizca panel yapiskan. Panelin gercek
+    // yolculugunu olcmezsek cubuk, bolumun ortasindaki dar bir aralikta
+    // birden doluyor.
+    (rect) => {
+      const panel = panelRef.current;
+      if (!panel) return 0;
+      const style = getComputedStyle(panel);
+      const stickyTop = parseFloat(style.top) || 0;
+      return stickyProgress(rect.top, rect.height, panel.offsetHeight, stickyTop);
+    }
+  );
 
   // Şeritler paragrafların önüne girer, bu yüzden paragraf indeksi blok
   // indeksinden ayrı sayılır: başlık/alıntı/liste araya girse de kayma olmaz.
@@ -79,12 +94,22 @@ export default function StoryScroll({
                 {band !== undefined && scenes[band] && (
                   <figure className="my-10 overflow-hidden rounded-xl border border-sand xl:hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={scenes[band]} alt="" loading="lazy" className="aspect-[16/10] w-full object-cover" />
+                    <img
+                      src={scenes[band].src}
+                      alt={scenes[band].alt}
+                      loading="lazy"
+                      className="aspect-[16/10] w-full object-cover"
+                    />
+                    {scenes[band].alt && (
+                      <figcaption className="bg-ivory/60 px-4 py-2 text-xs text-stone/80">
+                        {scenes[band].alt}
+                      </figcaption>
+                    )}
                   </figure>
                 )}
 
                 {block.kind === "heading" && (
-                  <Reveal className="mt-12 first:mt-0">
+                  <Reveal className={i === 0 ? "" : "mt-12"}>
                     <h3 className="font-display text-xl font-medium text-forest md:text-2xl">
                       {renderInline(block.text)}
                     </h3>
@@ -113,7 +138,7 @@ export default function StoryScroll({
                 )}
 
                 {block.kind === "para" && (
-                  <Reveal className={paraIndex === 0 ? "" : "mt-6"}>
+                  <Reveal className={i === 0 ? "" : "mt-6"}>
                     <p
                       className={
                         paraIndex === 0
@@ -133,10 +158,10 @@ export default function StoryScroll({
         {/* Yapışkan fotoğraf paneli — yalnızca xl ve üzeri */}
         {scenes.length > 0 && (
           <div className="hidden xl:block">
-            <div className="sticky top-[104px] h-[calc(100vh-10rem)] overflow-hidden rounded-xl bg-forest-deep">
-              {scenes.map((src, i) => (
+            <div ref={panelRef} className="sticky top-[104px] h-[calc(100vh-10rem)] overflow-hidden rounded-xl bg-forest-deep">
+              {scenes.map((scene, i) => (
                 <div
-                  key={src + i}
+                  key={scene.src + i}
                   aria-hidden="true"
                   className={`absolute inset-0 transition-opacity duration-700 ease-out motion-reduce:transition-none ${
                     i === activeScene ? "opacity-100" : "opacity-0"
@@ -144,8 +169,9 @@ export default function StoryScroll({
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={src}
-                    alt=""
+                    src={scene.src}
+                    alt={scene.alt}
+                    loading="lazy"
                     className={`h-full w-full object-cover transition-transform duration-[1200ms] ease-out motion-reduce:transition-none motion-reduce:scale-100 ${
                       i === activeScene ? "scale-100" : "scale-105"
                     }`}
@@ -162,7 +188,7 @@ export default function StoryScroll({
                 {String(activeScene + 1).padStart(2, "0")}
               </span>
 
-              <span className="absolute left-6 top-6 text-[11px] uppercase tracking-[0.3em] text-gold">
+              <span aria-hidden="true" className="absolute left-6 top-6 text-[11px] uppercase tracking-[0.3em] text-gold">
                 {kicker} · {chapterLabel} {String(activeScene + 1).padStart(2, "0")} —{" "}
                 {String(sceneCount).padStart(2, "0")}
               </span>

@@ -63,7 +63,9 @@ export default async function AboutPage({
   const storyBlocks = parseBlocks(content.about_body ?? "");
   const storyScenes = resolveScenes(
     settings,
-    storyBlocks.filter((b) => b.kind === "image").map((b) => b.src)
+    storyBlocks
+      .filter((b) => b.kind === "image")
+      .map((b) => (b.kind === "image" ? { src: b.src, alt: b.alt } : { src: "", alt: "" }))
   );
 
   const stats = [
