@@ -179,11 +179,30 @@ Varsayılan **1**'dir: kesinti yerine kuyruk oluşturur, yani yavaşlar ama çö
 serverless önerisi de budur. Planınız Pro veya üzeriyse (50-100 doğrudan bağlantı) bu
 fedakârlık gereksizdir — `DATABASE_CONNECTION_LIMIT=5` yeterlidir.
 
-**Kalıcı çözüm havuzlu bağlantıdır.** Prisma Console'dan alınan
-`prisma+postgres://…?api_key=…` dizesine geçildiğinde limitler 10 / 100 / 500 / 1000'e
-çıkar ve bu ödünleşme ortadan kalkar. `applyPoolLimits` havuzlu dizeye **dokunmaz**, bu
-yüzden geçişte kod değişikliği gerekmez: dize değişince emniyet kemeri kendiliğinden
-devre dışı kalır.
+**Kalıcı çözüm havuzlu bağlantıya geçmektir.** Her Prisma Postgres veritabanının iki
+dizesi vardır ve bunlar **yalnızca host'ta** farklıdır:
+
+```bash
+# Uygulama trafiği — havuzlu
+DATABASE_URL="postgres://KULLANICI:PAROLA@pooled.db.prisma.io:5432/postgres?sslmode=require"
+# Prisma CLI, migrate, introspection, Studio — doğrudan
+DIRECT_URL="postgres://KULLANICI:PAROLA@db.prisma.io:5432/postgres?sslmode=require"
+```
+
+Havuzlu limitler 10 / 100 / 500 / 1000'dir, yani ödünleşme ortadan kalkar. Dizeler Prisma
+Console → *Connect to your database* altından alınır.
+
+Geçişte `prisma/schema.prisma`'ya `directUrl = env("DIRECT_URL")` eklenmelidir; aksi
+hâlde migration havuz üzerinden gitmeye çalışır. **Şema değişikliği ile ortam değişkenleri
+aynı anda yapılmalı:** şemada `env("DIRECT_URL")` varken değişken tanımsızsa Prisma CLI
+hata verir.
+
+`applyPoolLimits` havuzlu kurulumu iki işaretten tanır ve dizeye **dokunmaz**: host'un
+`pooled.` ile başlaması, ya da `DIRECT_URL`'in tanımlı olması. Yani geçiş tamamlandığında
+emniyet kemeri kendiliğinden devre dışı kalır.
+
+> **Accelerate kullanmayın.** `prisma+postgres://accelerate.prisma-data.net` ucu
+> **1 Aralık 2026'da kapanıyor.** Havuzlu TCP (`pooled.db.prisma.io`) güncel yoldur.
 
 > Prisma ORM 7'de `connection_limit`/`pool_timeout` URL parametrelerinin yerini driver
 > adapter'ın `max` ve `idleTimeoutMillis` ayarları alır; o yükseltmede `src/lib/dbUrl.ts`

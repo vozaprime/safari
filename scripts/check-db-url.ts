@@ -72,5 +72,26 @@ expect(
   "dizede pool_timeout varsa korunur, yalnizca connection_limit eklenir"
 );
 
+// --- HAVUZLU TCP dizesi de korunmali ---
+// Prisma Postgres'in havuzlu ucu `pooled.db.prisma.io`'dur ve semasi duz
+// `postgres://`dir. Sinir oraya uygulanirsa havuzun anlami kalmaz.
+const HAVUZLU_TCP = "postgres://kullanici:parola@pooled.db.prisma.io:5432/postgres?sslmode=require";
+expect(applyPoolLimits(HAVUZLU_TCP, {}), HAVUZLU_TCP, "havuzlu TCP ucu (pooled.*) sinirlanmaz");
+expect(
+  applyPoolLimits("postgres://k:p@pooled.ornek.io:5432/db", {}),
+  "postgres://k:p@pooled.ornek.io:5432/db",
+  "pooled. onekli herhangi bir host havuzlu sayilir"
+);
+expect(
+  applyPoolLimits(DOGRUDAN, { DIRECT_URL: "postgres://k:p@db.ornek.io:5432/postgres" }),
+  DOGRUDAN,
+  "DIRECT_URL tanimliysa DATABASE_URL havuzlu kabul edilir ve sinirlanmaz"
+);
+expect(
+  applyPoolLimits(DOGRUDAN, { DIRECT_URL: "   " }),
+  DOGRUDAN + "&connection_limit=1&pool_timeout=20",
+  "bos DIRECT_URL havuzlu kurulum sayilmaz"
+);
+
 console.log(failures ? `\n${failures} HATA` : "\nhata yok");
 process.exit(failures ? 1 : 0);

@@ -24,6 +24,23 @@
 /** Yalnızca doğrudan Postgres dizeleri sınırlanır. */
 const DOGRUDAN_SEMALAR = ["postgres://", "postgresql://"] as const;
 
+/**
+ * Havuzlu ucun şeması da düz `postgres://`dir; ayırt eden şey host'tur.
+ * Prisma Postgres'te havuzlu ve doğrudan dizeler **yalnızca host'ta** farklıdır:
+ * `pooled.db.prisma.io` ↔ `db.prisma.io`. Sınır havuzlu uca uygulanırsa havuzun
+ * anlamı kalmaz — instance başına yine tek bağlantıya düşülür.
+ */
+const HAVUZLU_HOST_ONEKI = "pooled.";
+
+/** Dize ayrıştırılamazsa `undefined`; çağıran o durumda dizeye dokunmaz. */
+function hostAl(url: string): string | undefined {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
 const VARSAYILAN_CONNECTION_LIMIT = "1";
 const VARSAYILAN_POOL_TIMEOUT = "20";
 
@@ -54,6 +71,13 @@ export function applyPoolLimits(
   if (!url) return url;
   if (!DOGRUDAN_SEMALAR.some((s) => url.startsWith(s))) return url;
   if (parametreVar(url, "connection_limit")) return url;
+
+  // Havuzlu kurulumun iki işareti: ya host havuzlu uca işaret eder, ya da
+  // `DIRECT_URL` tanımlıdır — Prisma'nın kendi düzeninde `DATABASE_URL` havuzlu,
+  // `DIRECT_URL` doğrudan dizedir (CLI, migrate, introspection onu kullanır).
+  // Her iki durumda da sınır koymak havuzu boşa çıkarır.
+  if ((env.DIRECT_URL ?? "").trim() !== "") return url;
+  if (hostAl(url)?.startsWith(HAVUZLU_HOST_ONEKI)) return url;
 
   const limit = pozitifTamSayi(env.DATABASE_CONNECTION_LIMIT) ?? VARSAYILAN_CONNECTION_LIMIT;
   const timeout = pozitifTamSayi(env.DATABASE_POOL_TIMEOUT) ?? VARSAYILAN_POOL_TIMEOUT;
