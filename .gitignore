@@ -20,3 +20,6 @@ public/uploads/*
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Superpowers plan calisma alani (git-ignored scratch)
+.superpowers/
