@@ -65,8 +65,9 @@ export default function StoryScroll({
       </Reveal>
 
       <div className="mt-10 grid gap-10 xl:grid-cols-[1fr_minmax(0,520px)] xl:gap-16">
-        {/* Anlatı */}
-        <div>
+        {/* Anlatı — panel yokken (xl altı) satır ölçüsü serbest bırakılırsa
+            1024px'te ~110 karaktere çıkıyor; okunur bir genişlikte ortalanıyor. */}
+        <div className="mx-auto w-full max-w-2xl xl:mx-0 xl:max-w-none">
           {blocks.map((block, i) => {
             if (block.kind === "image") return null; // sahne havuzuna taşındı
 
