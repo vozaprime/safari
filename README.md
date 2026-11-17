@@ -169,19 +169,33 @@ kaydırma, "başa dön" geçişleri). Buton ve bağlantılarda görünür odak h
 
 ## Yayına alma (deploy)
 
-> ⚠️ **Vercel projesi bu GitHub reposuna BAĞLI DEĞİL.** `main`'e merge etmek production'a
-> hiçbir şey çıkarmaz. Deploy ayrı ve elle bir adımdır.
+`main` dalına yapılan merge Vercel'de production deploy'u tetikler. 17 Kasım 2026'da
+PR #6 + #7 merge edildiğinde doğrulandı: hiçbir CLI komutu çalıştırılmadan PR #7'nin
+`Cache-Control` kuralları canlıya çıktı.
+
+Elle deploy gerekirse (git'e girmeyen bir dosyayı yüklemek gibi):
 
 ```bash
 git pull --ff-only                  # ana dizinde
 npx vercel deploy --prod --yes      # ANA dizinden çalıştırın, worktree'den değil
 ```
 
-**Neden ana dizin:** `.gitignore` tüm `*.mp4`/`*.mov`/`*.wav` dosyalarını yoksayar.
-`public/videos/*.mp4` git'te değildir, yalnızca ana dizinde bulunur ve Vercel CLI çalışma
-dizinindeki dosyaları yükler. Worktree'den deploy edilirse videolar production'da 404 olur.
+**Sahne videoları git'tedir.** `.gitignore` ham medyayı (`*.mp4`, `*.mov`, `*.wav`,
+`*.m4a`) yoksayar, ancak `!public/videos/*.mp4` istisnası altı sahne videosunu depoda
+tutar. Bunlar yayının parçasıdır: depoda olmazlarsa git kaynaklı deploy onları götürmez
+ve ana sayfa ile Hakkımızda'daki video alanları boşalır. 17 Kasım 2026'da tam olarak bu
+oldu — `/videos/*.mp4` adresleri videonun yerine 404 sayfasının HTML'ini döndürdü.
 
-Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayında" aynı şey değildir.
+`public/videos/` altına yeni video eklerken dosyayı **commit edin.** İstisna yalnızca bu
+klasörün birinci seviyesini ve `.mp4` uzantısını kapsar; alt klasörler ve `.mov` dışındadır.
+
+Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayında" aynı şey değildir:
+
+```bash
+curl -sI https://www.safarict.com/videos/about-hero.mp4 | grep -i content-type
+```
+
+`video/mp4` görmelisiniz. `text/html` dosyanın deploy'a girmediği anlamına gelir.
 
 ## Bilinen tuzaklar
 
@@ -190,5 +204,6 @@ Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayın
 - **`next dev`/`next start` çalışırken `prisma generate`** DLL kilidi (EPERM) verir; önce Next süreçlerini kapatın
 - **Form metinleri CRLF gelir** — `src/lib/richtext.tsx` ve server action'lar `\r\n` → `\n` normalize eder
 - **`site_logo` ayarı doluysa** yerleşik `/brand/logo.png` ezilir
+- **Worktree'de `.env` yoktur** — gitignore'lu olduğu için her yeni worktree'ye ana dizinden elle kopyalanır; yoksa Prisma `DATABASE_URL` bulamaz
 - **Worktree'lerin kendi `node_modules`'u yoktur** (ana depoyu paylaşırlar); Turbopack build orada kök hatası verebilir
 - **`Dockerfile` güncel değildir** — SQLite dönemine aittir ve her başlatmada `db push` + `seed` çalıştırır. Paylaşılan PostgreSQL ile bu yıkıcıdır; kullanmadan önce gözden geçirin. Güncel yayın yolu Vercel'dir.
