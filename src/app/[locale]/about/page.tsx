@@ -77,17 +77,14 @@ export default async function AboutPage({
 
       {/* Story narrative — editorial, with an image collage */}
       <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
-        {/* Anlatı metni uzun (7 paragraf); görsel sütunu `items-center` ile ortalandığında
-            metnin alt yarısı boyunca sağ taraf boş kalıyordu. Sütunu yukarı hizalayıp
-            yapışkan yaparak görsel, okuma boyunca metne eşlik ediyor. */}
-        <div className="grid items-start gap-12 lg:grid-cols-2 lg:gap-16">
+        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <Reveal>
             <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold-dark">{t.about.story_kicker}</p>
             <h2 className="font-display mt-3 text-3xl text-forest md:text-4xl">{t.about.story_title}</h2>
             <div className="mt-4 h-1 w-16 rounded bg-gold" />
             <ProseText text={content.about_body ?? ""} className="mt-6 text-stone" lead />
           </Reveal>
-          <Reveal delay={1} className="lg:sticky lg:top-28">
+          <Reveal delay={1}>
             <div className="relative">
               <div aria-hidden="true" className="absolute -right-4 -top-4 h-24 w-24 rounded-2xl border-2 border-gold/40" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
