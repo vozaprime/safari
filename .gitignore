@@ -18,6 +18,11 @@ public/uploads/*
 *.mov
 *.wav
 
+# Istisna: sitenin sahne videolari. Bunlar yayinin parcasi, ham kayit degil.
+# Depoda olmazlarsa git kaynakli deploy onlari goturmez ve ana sayfa ile
+# Hakkimizda'daki video alanlari bos kalir (17 Kasim 2026'da boyle oldu).
+!public/videos/*.mp4
+
 # TypeScript incremental build cache
 *.tsbuildinfo
 

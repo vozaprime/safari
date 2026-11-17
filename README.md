@@ -50,6 +50,7 @@ npx tsx scripts/apply-about.ts             # kuru çalışma (--write ile Hakkı
 npx tsx scripts/apply-slugs.ts             # dil slug'ları — kuru çalışma
 npx tsx scripts/apply-slugs.ts --publish   # dil slug'larını yazar
 npx tsx scripts/check-richtext-images.ts   # mini-markdown ayrıştırıcı testleri
+npx tsx scripts/check-social-url.ts        # sosyal medya bağlantı doğrulayıcı testleri
 npx tsx scripts/check-story-scenes.ts      # sahne/şerit/ilerleme mantığı testleri
 npx tsx scripts/check-story-scroll.ts      # StoryScroll işaretleme testleri (react-dom/server)
 npx tsx scripts/check-apply-about.ts       # Hakkımızda gövde doğrulayıcısı testleri
@@ -148,6 +149,22 @@ port 587, uygulama şifresi).
 - **2FA/TOTP**, oturum sürüm damgası (`tokenVersion`), giriş denemesi kaydı
 - **Hata sınırları** — `[locale]/error.tsx` (3 dil), `admin/error.tsx`, `global-error.tsx`
 
+## Statik dosya önbelleği
+
+`next.config.ts` içindeki `cacheRules`, `public/` altındaki medyaya `Cache-Control` verir.
+Next bu dosyaları varsayılan olarak `max-age=0, must-revalidate` ile sunar; ana sayfadaki
+~17 MB video bu yüzden her ziyarette yeniden doğrulanıyordu.
+
+| Yol | Politika |
+|---|---|
+| `/videos/*` | 7 gün taze + 30 gün `stale-while-revalidate` |
+| `/images/*`, `/brand/*` | 1 gün taze + 7 gün `stale-while-revalidate` |
+
+Dosya adları içerik imzası taşımadığı için `immutable` **kullanılmaz**. Bir medya dosyasını
+**aynı adla** değiştirirseniz ziyaretçiler tazelik süresi boyunca eskisini görmeye devam
+eder; anında yansıması gerekiyorsa dosyaya yeni bir ad verin veya Vercel'den önbelleği
+temizleyin.
+
 ## Hakkımızda sahne görselleri
 
 Hakkımızda sayfasındaki hikâye bölümü (`src/components/StoryScroll.tsx`), okuma
@@ -179,19 +196,35 @@ kaydırma, "başa dön" geçişleri). Buton ve bağlantılarda görünür odak h
 
 ## Yayına alma (deploy)
 
-> ⚠️ **Vercel projesi bu GitHub reposuna BAĞLI DEĞİL.** `main`'e merge etmek production'a
-> hiçbir şey çıkarmaz. Deploy ayrı ve elle bir adımdır.
+Deploy elle yapılır. PowerShell 5.1'de `&&` **çalışmaz**, ayırıcı `;` kullanın:
 
-```bash
-git pull --ff-only                  # ana dizinde
-npx vercel deploy --prod --yes      # ANA dizinden çalıştırın, worktree'den değil
+```powershell
+Set-Location "D:\PROJELER\SAFARI CONSULTING"; git pull --ff-only; npx vercel deploy --prod --yes
 ```
 
-**Neden ana dizin:** `.gitignore` tüm `*.mp4`/`*.mov`/`*.wav` dosyalarını yoksayar.
-`public/videos/*.mp4` git'te değildir, yalnızca ana dizinde bulunur ve Vercel CLI çalışma
-dizinindeki dosyaları yükler. Worktree'den deploy edilirse videolar production'da 404 olur.
+**Deploy yerel dosyalarınızı değil, deponun production dalını (`main`) yayına alır.**
+Proje `.vercel/repo.json` ile repo seviyesinde bağlı; 17 Kasım 2026'da worktree'den
+yapılan bir `vercel deploy --prod` sonrası canlıya `main`'in ağacı çıktı — o worktree'de
+bulunan PR #8 kodu canlıda görünmedi, buna karşılık `main`'de merge edilmiş PR #7
+görünüyordu. Sonuç: **yalnızca commit edilmiş dosyalar yayına gider.** Commit edilmemiş
+bir değişikliği veya gitignore'lu bir dosyayı deploy ederek canlıya çıkaramazsınız.
 
-Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayında" aynı şey değildir.
+**Sahne videoları git'tedir.** `.gitignore` ham medyayı (`*.mp4`, `*.mov`, `*.wav`,
+`*.m4a`) yoksayar, ancak `!public/videos/*.mp4` istisnası altı sahne videosunu depoda
+tutar. Bunlar yayının parçasıdır: depoda olmazlarsa git kaynaklı deploy onları götürmez
+ve ana sayfa ile Hakkımızda'daki video alanları boşalır. 17 Kasım 2026'da tam olarak bu
+oldu — `/videos/*.mp4` adresleri videonun yerine 404 sayfasının HTML'ini döndürdü.
+
+`public/videos/` altına yeni video eklerken dosyayı **commit edin.** İstisna yalnızca bu
+klasörün birinci seviyesini ve `.mp4` uzantısını kapsar; alt klasörler ve `.mov` dışındadır.
+
+Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayında" aynı şey değildir:
+
+```bash
+curl -sI https://www.safarict.com/videos/about-hero.mp4 | grep -i content-type
+```
+
+`video/mp4` görmelisiniz. `text/html` dosyanın deploy'a girmediği anlamına gelir.
 
 ## Bilinen tuzaklar
 

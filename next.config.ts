@@ -39,6 +39,28 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
 ];
 
+/**
+ * `public/` altındaki dosyalar için önbellek politikası.
+ *
+ * Next bu dosyaları varsayılan olarak `public, max-age=0, must-revalidate` ile
+ * sunuyor; yani ana sayfadaki ~17 MB video her ziyarette yeniden doğrulanıyordu.
+ * Dosya adları içerik imzası taşımadığı için (`hero-journey.mp4` gibi) `immutable`
+ * kullanmıyoruz: bir dosya aynı adla değiştirilirse ziyaretçiler eskisinde takılı
+ * kalırdı. Bunun yerine makul bir tazelik süresi + `stale-while-revalidate`
+ * veriyoruz; süre dolduğunda içerik arka planda yenilenir.
+ *
+ * DİKKAT: Bir medya dosyasını aynı adla değiştirirseniz, tazelik süresi boyunca
+ * eski sürüm sunulmaya devam eder. Anında yansıması gerekiyorsa dosyaya yeni bir
+ * ad verin (veya Vercel'den önbelleği temizleyin).
+ */
+const cacheRules = [
+  // Videolar büyük ve nadiren değişir.
+  { source: "/videos/:path*", value: "public, max-age=604800, stale-while-revalidate=2592000" },
+  // Görseller ve marka varlıkları daha sık güncellenebilir.
+  { source: "/images/:path*", value: "public, max-age=86400, stale-while-revalidate=604800" },
+  { source: "/brand/:path*", value: "public, max-age=86400, stale-while-revalidate=604800" },
+];
+
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [],
@@ -49,6 +71,10 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      ...cacheRules.map((rule) => ({
+        source: rule.source,
+        headers: [{ key: "Cache-Control", value: rule.value }],
+      })),
     ];
   },
 };
