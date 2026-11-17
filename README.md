@@ -200,5 +200,7 @@ Deploy sonrası canlıyı gerçekten doğrulayın — "merge edildi" ile "yayın
 - **`next dev`/`next start` çalışırken `prisma generate`** DLL kilidi (EPERM) verir; önce Next süreçlerini kapatın
 - **Form metinleri CRLF gelir** — `src/lib/richtext.tsx` ve server action'lar `\r\n` → `\n` normalize eder
 - **`site_logo` ayarı doluysa** yerleşik `/brand/logo.png` ezilir
-- **Worktree'lerin kendi `node_modules`'u yoktur** (ana depoyu paylaşırlar); Turbopack build orada kök hatası verebilir
+- **Worktree'lerin kendi `node_modules`'u yoktur** (ana depoyu paylaşırlar); Turbopack build orada kök hatası verebilir. Gerekirse worktree içinde `npm install` çalıştırın
+- **Yeni bir worktree'de `.env` YOKTUR** — `.gitignore` onu dışarıda bırakır. Kopyalamadan sunucu başlatırsanız her sayfa `PrismaClientInitializationError: Environment variable not found: DATABASE_URL` ile çöker. Ana depodan kopyalayın: `cp ../../../.env .env` (gitignore'lu olduğu için commit'e girmez, silmeye de gerek yoktur)
+- **`next-env.d.ts` dev ile build arasında gidip gelir** (`.next/types` ↔ `.next/dev/types`); bu değişikliği commit etmeyin
 - **`Dockerfile` güncel değildir** — SQLite dönemine aittir ve her başlatmada `db push` + `seed` çalıştırır. Paylaşılan PostgreSQL ile bu yıkıcıdır; kullanmadan önce gözden geçirin. Güncel yayın yolu Vercel'dir.
