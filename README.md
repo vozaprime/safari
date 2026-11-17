@@ -145,6 +145,29 @@ port 587, uygulama şifresi).
 - **2FA/TOTP**, oturum sürüm damgası (`tokenVersion`), giriş denemesi kaydı
 - **Hata sınırları** — `[locale]/error.tsx` (3 dil), `admin/error.tsx`, `global-error.tsx`
 
+## Hakkımızda sahne görselleri
+
+Hakkımızda sayfasındaki hikâye bölümü (`src/components/StoryScroll.tsx`), okuma
+ilerledikçe çapraz geçişle değişen dört sahne görseli kullanır. Görseller
+**Ayarlar → Marka & SEO → Hakkımızda sahne görselleri** altından yönetilir ve
+`Setting` tablosunda tutulur:
+
+| Anahtar | Sahnenin anlatıdaki yeri |
+|---|---|
+| `about_scene_1` | kuruluş ve geçmiş |
+| `about_scene_2` | bugünün hizmetleri |
+| `about_scene_3` | çözüm ortaklıkları ve değerler |
+| `about_scene_4` | gelecek vizyonu |
+
+`Setting` dilden bağımsız olduğu için görseller üç dilde ortaktır — bir görseli
+değiştirmek tek işlemdir. Boş bırakılan bir sahne `src/lib/storyScenes.ts`
+içindeki varsayılana düşer, dolayısıyla panel hiç kullanılmamışken de bölüm
+eksiksiz görünür. Sayfa `force-dynamic` olduğu için değişiklik deploy
+beklemeden yansır.
+
+Metne panelden gömülen görseller (`![](url)`) anlatı akışından çıkarılıp sahne
+havuzunun sonuna eklenir; hiçbir görsel kaybolmaz.
+
 ## Erişilebilirlik ve hareket
 
 Tüm animasyonlar `prefers-reduced-motion` altında kapanır (kaydırma animasyonları, yumuşak
