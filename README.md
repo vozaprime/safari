@@ -46,6 +46,7 @@ npx tsx scripts/check-posts.ts             # blog denetimi — DB'ye dokunmaz
 npx tsx scripts/apply-posts.ts             # kuru çalışma, ne yapacağını yazar
 npx tsx scripts/apply-posts.ts --publish   # uygular ve yayına alır (--draft ile taslak)
 npx tsx scripts/apply-descriptions.ts      # hizmet açıklamalarını uygular
+npx tsx scripts/apply-about.ts             # kuru çalışma (--write ile Hakkımızda metnini uygular)
 npx tsx scripts/apply-slugs.ts             # dil slug'ları — kuru çalışma
 npx tsx scripts/apply-slugs.ts --publish   # dil slug'larını yazar
 npx tsx scripts/check-richtext-images.ts   # mini-markdown ayrıştırıcı testleri
