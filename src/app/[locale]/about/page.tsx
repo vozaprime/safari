@@ -7,9 +7,11 @@ import StatRing from "@/components/StatRing";
 import TiltCard from "@/components/TiltCard";
 import ValueIcon from "@/components/ValueIcon";
 import ReferencesStrip from "@/components/ReferencesMarquee";
-import { ProseText, renderInline } from "@/lib/richtext";
+import StoryScroll from "@/components/StoryScroll";
+import { parseBlocks, renderInline } from "@/lib/richtext";
 import { defaultLocale, getDict, isLocale, localePath, type Locale } from "@/lib/i18n";
-import { getPageContent, getServices, getReferences } from "@/lib/content";
+import { getPageContent, getServices, getReferences, getSettings } from "@/lib/content";
+import { resolveScenes } from "@/lib/storyScenes";
 import { pageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
@@ -47,12 +49,24 @@ export default async function AboutPage({
   const { locale: raw } = await params;
   const locale: Locale = isLocale(raw) ? raw : defaultLocale;
   const t = getDict(locale);
-  const [content, services, references] = await Promise.all([
+  const [content, services, references, settings] = await Promise.all([
     getPageContent(locale),
     getServices(locale),
     getReferences(),
+    getSettings(),
   ]);
   const values = JSON.parse(content.values_json ?? "[]") as { title: string; text: string }[];
+
+  // Anlatı blokları olduğu gibi StoryScroll'a geçer: hiçbir blok düşürülmez.
+  // Gövdeye panelden gömülmüş görseller metinden çıkarılıp sahne havuzuna
+  // eklenir, böylece kaybolmazlar.
+  const storyBlocks = parseBlocks(content.about_body ?? "");
+  const storyScenes = resolveScenes(
+    settings,
+    storyBlocks
+      .filter((b) => b.kind === "image")
+      .map((b) => (b.kind === "image" ? { src: b.src, alt: b.alt } : { src: "", alt: "" }))
+  );
 
   const stats = [
     { value: services.length, suffix: "", label: t.hero.stat_services },
@@ -75,26 +89,14 @@ export default async function AboutPage({
         scrollCue={t.story.scroll_cue}
       />
 
-      {/* Story narrative — editorial, with an image collage */}
-      <section className="mx-auto max-w-6xl px-5 py-20 md:py-28">
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <Reveal>
-            <p className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold-dark">{t.about.story_kicker}</p>
-            <h2 className="font-display mt-3 text-3xl text-forest md:text-4xl">{t.about.story_title}</h2>
-            <div className="mt-4 h-1 w-16 rounded bg-gold" />
-            <ProseText text={content.about_body ?? ""} className="mt-6 text-stone" lead />
-          </Reveal>
-          <Reveal delay={1}>
-            <div className="relative">
-              <div aria-hidden="true" className="absolute -right-4 -top-4 h-24 w-24 rounded-2xl border-2 border-gold/40" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/about.jpg" alt="" className="relative z-10 aspect-[4/5] w-full rounded-2xl object-cover shadow-xl shadow-forest/10" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/services/yatirim-danismanligi.jpg" alt="" className="absolute -bottom-6 -left-6 z-20 hidden aspect-square w-36 rounded-xl border-4 border-ivory object-cover shadow-lg shadow-forest/20 sm:block" />
-            </div>
-          </Reveal>
-        </div>
-      </section>
+      {/* Story narrative — sahnelenmiş anlatı (bkz. StoryScroll) */}
+      <StoryScroll
+        blocks={storyBlocks}
+        scenes={storyScenes}
+        kicker={t.about.story_kicker}
+        title={t.about.story_title}
+        chapterLabel={t.story.chapter}
+      />
 
       {/* Stats over motion */}
       <section className="relative overflow-hidden bg-forest text-ivory">

@@ -129,6 +129,27 @@ export default async function SettingsPage() {
             </div>
           </AdminCard>
 
+          <AdminCard title="Hakkımızda sahne görselleri" description="Hakkımızda sayfasındaki hikâye bölümünde, okuma ilerledikçe sırayla gösterilir. Üç dilde ortaktır. Boş bırakılan sahne varsayılan görsele düşer.">
+            <div className="mt-4 grid gap-5 sm:grid-cols-2">
+              <div>
+                <p className={labelClass}>Sahne 1 — kuruluş ve geçmiş</p>
+                <Uploader name="about_scene_1" defaultValue={s.about_scene_1 ?? ""} label="Sahne 1" aspect="aspect-[4/5]" />
+              </div>
+              <div>
+                <p className={labelClass}>Sahne 2 — bugünün hizmetleri</p>
+                <Uploader name="about_scene_2" defaultValue={s.about_scene_2 ?? ""} label="Sahne 2" aspect="aspect-[4/5]" />
+              </div>
+              <div>
+                <p className={labelClass}>Sahne 3 — çözüm ortaklıkları ve değerler</p>
+                <Uploader name="about_scene_3" defaultValue={s.about_scene_3 ?? ""} label="Sahne 3" aspect="aspect-[4/5]" />
+              </div>
+              <div>
+                <p className={labelClass}>Sahne 4 — gelecek vizyonu</p>
+                <Uploader name="about_scene_4" defaultValue={s.about_scene_4 ?? ""} label="Sahne 4" aspect="aspect-[4/5]" />
+              </div>
+            </div>
+          </AdminCard>
+
           {SaveBar}
         </form>
       ),

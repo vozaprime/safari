@@ -46,10 +46,14 @@ npx tsx scripts/check-posts.ts             # blog denetimi — DB'ye dokunmaz
 npx tsx scripts/apply-posts.ts             # kuru çalışma, ne yapacağını yazar
 npx tsx scripts/apply-posts.ts --publish   # uygular ve yayına alır (--draft ile taslak)
 npx tsx scripts/apply-descriptions.ts      # hizmet açıklamalarını uygular
+npx tsx scripts/apply-about.ts             # kuru çalışma (--write ile Hakkımızda metnini uygular)
 npx tsx scripts/apply-slugs.ts             # dil slug'ları — kuru çalışma
 npx tsx scripts/apply-slugs.ts --publish   # dil slug'larını yazar
 npx tsx scripts/check-richtext-images.ts   # mini-markdown ayrıştırıcı testleri
 npx tsx scripts/check-social-url.ts        # sosyal medya bağlantı doğrulayıcı testleri
+npx tsx scripts/check-story-scenes.ts      # sahne/şerit/ilerleme mantığı testleri
+npx tsx scripts/check-story-scroll.ts      # StoryScroll işaretleme testleri (react-dom/server)
+npx tsx scripts/check-apply-about.ts       # Hakkımızda gövde doğrulayıcısı testleri
 ```
 
 `check-posts.ts` şunları doğrular: dil başına en az 300 kelime, her dilde 3+ başlık ·
@@ -161,6 +165,29 @@ Dosya adları içerik imzası taşımadığı için `immutable` **kullanılmaz**
 eder; anında yansıması gerekiyorsa dosyaya yeni bir ad verin veya Vercel'den önbelleği
 temizleyin.
 
+## Hakkımızda sahne görselleri
+
+Hakkımızda sayfasındaki hikâye bölümü (`src/components/StoryScroll.tsx`), okuma
+ilerledikçe çapraz geçişle değişen dört sahne görseli kullanır. Görseller
+**Ayarlar → Marka & SEO → Hakkımızda sahne görselleri** altından yönetilir ve
+`Setting` tablosunda tutulur:
+
+| Anahtar | Sahnenin anlatıdaki yeri |
+|---|---|
+| `about_scene_1` | kuruluş ve geçmiş |
+| `about_scene_2` | bugünün hizmetleri |
+| `about_scene_3` | çözüm ortaklıkları ve değerler |
+| `about_scene_4` | gelecek vizyonu |
+
+`Setting` dilden bağımsız olduğu için görseller üç dilde ortaktır — bir görseli
+değiştirmek tek işlemdir. Boş bırakılan bir sahne `src/lib/storyScenes.ts`
+içindeki varsayılana düşer, dolayısıyla panel hiç kullanılmamışken de bölüm
+eksiksiz görünür. Sayfa `force-dynamic` olduğu için değişiklik deploy
+beklemeden yansır.
+
+Metne panelden gömülen görseller (`![](url)`) anlatı akışından çıkarılıp sahne
+havuzunun sonuna eklenir; hiçbir görsel kaybolmaz.
+
 ## Erişilebilirlik ve hareket
 
 Tüm animasyonlar `prefers-reduced-motion` altında kapanır (kaydırma animasyonları, yumuşak
@@ -206,6 +233,7 @@ curl -sI https://www.safarict.com/videos/about-hero.mp4 | grep -i content-type
 - **`next dev`/`next start` çalışırken `prisma generate`** DLL kilidi (EPERM) verir; önce Next süreçlerini kapatın
 - **Form metinleri CRLF gelir** — `src/lib/richtext.tsx` ve server action'lar `\r\n` → `\n` normalize eder
 - **`site_logo` ayarı doluysa** yerleşik `/brand/logo.png` ezilir
-- **Worktree'de `.env` yoktur** — gitignore'lu olduğu için her yeni worktree'ye ana dizinden elle kopyalanır; yoksa Prisma `DATABASE_URL` bulamaz
-- **Worktree'lerin kendi `node_modules`'u yoktur** (ana depoyu paylaşırlar); Turbopack build orada kök hatası verebilir
+- **Worktree'lerin kendi `node_modules`'u yoktur** (ana depoyu paylaşırlar); Turbopack build orada kök hatası verebilir. Gerekirse worktree içinde `npm install` çalıştırın
+- **Yeni bir worktree'de `.env` YOKTUR** — `.gitignore` onu dışarıda bırakır. Kopyalamadan sunucu başlatırsanız her sayfa `PrismaClientInitializationError: Environment variable not found: DATABASE_URL` ile çöker. Ana depodan kopyalayın: `cp ../../../.env .env` (gitignore'lu olduğu için commit'e girmez, silmeye de gerek yoktur)
+- **`next-env.d.ts` dev ile build arasında gidip gelir** (`.next/types` ↔ `.next/dev/types`); bu değişikliği commit etmeyin
 - **`Dockerfile` güncel değildir** — SQLite dönemine aittir ve her başlatmada `db push` + `seed` çalıştırır. Paylaşılan PostgreSQL ile bu yıkıcıdır; kullanmadan önce gözden geçirin. Güncel yayın yolu Vercel'dir.
