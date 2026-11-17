@@ -49,6 +49,7 @@ npx tsx scripts/apply-descriptions.ts      # hizmet açıklamalarını uygular
 npx tsx scripts/apply-slugs.ts             # dil slug'ları — kuru çalışma
 npx tsx scripts/apply-slugs.ts --publish   # dil slug'larını yazar
 npx tsx scripts/check-richtext-images.ts   # mini-markdown ayrıştırıcı testleri
+npx tsx scripts/check-social-url.ts        # sosyal medya bağlantı doğrulayıcı testleri
 ```
 
 `check-posts.ts` şunları doğrular: dil başına en az 300 kelime, her dilde 3+ başlık ·
@@ -143,6 +144,22 @@ port 587, uygulama şifresi).
 - **HTTP güvenlik başlıkları** (`next.config.ts`) — CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-DNS-Prefetch-Control
 - **2FA/TOTP**, oturum sürüm damgası (`tokenVersion`), giriş denemesi kaydı
 - **Hata sınırları** — `[locale]/error.tsx` (3 dil), `admin/error.tsx`, `global-error.tsx`
+
+## Statik dosya önbelleği
+
+`next.config.ts` içindeki `cacheRules`, `public/` altındaki medyaya `Cache-Control` verir.
+Next bu dosyaları varsayılan olarak `max-age=0, must-revalidate` ile sunar; ana sayfadaki
+~17 MB video bu yüzden her ziyarette yeniden doğrulanıyordu.
+
+| Yol | Politika |
+|---|---|
+| `/videos/*` | 7 gün taze + 30 gün `stale-while-revalidate` |
+| `/images/*`, `/brand/*` | 1 gün taze + 7 gün `stale-while-revalidate` |
+
+Dosya adları içerik imzası taşımadığı için `immutable` **kullanılmaz**. Bir medya dosyasını
+**aynı adla** değiştirirseniz ziyaretçiler tazelik süresi boyunca eskisini görmeye devam
+eder; anında yansıması gerekiyorsa dosyaya yeni bir ad verin veya Vercel'den önbelleği
+temizleyin.
 
 ## Erişilebilirlik ve hareket
 
