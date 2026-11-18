@@ -54,6 +54,7 @@ npx tsx scripts/check-social-url.ts        # sosyal medya bağlantı doğrulayı
 npx tsx scripts/check-story-scenes.ts      # sahne/şerit/ilerleme mantığı testleri
 npx tsx scripts/check-story-scroll.ts      # StoryScroll işaretleme testleri (react-dom/server)
 npx tsx scripts/check-apply-about.ts       # Hakkımızda gövde doğrulayıcısı testleri
+npx tsx scripts/check-db-url.ts            # bağlantı havuzu parametreleri testleri
 ```
 
 `check-posts.ts` şunları doğrular: dil başına en az 300 kelime, her dilde 3+ başlık ·
@@ -74,6 +75,8 @@ aynı görsellerin kullanılması. **Yayın öncesi çalıştırın** — hata v
 | `SESSION_SECRET` | Oturum imza anahtarı — üretimde rastgele ve gizli olmalı |
 | `SITE_URL` | Yayın adresi; canonical/hreflang, OpenGraph, sitemap ve şifre sıfırlama bağlantıları bunu kullanır. Boş bırakılırsa üretimde `https://www.safarict.com`, yerelde `http://localhost:3000` kullanılır; üretimde `*.vercel.app` değeri **yok sayılır** (bkz. `src/lib/seo.ts`) |
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob erişimi (medya yükleme). Blob store **public** olmalı |
+| `DATABASE_CONNECTION_LIMIT` | İsteğe bağlı. Instance başına havuz boyutu; varsayılan **1**. Yalnızca doğrudan (`postgres://`) bağlantıda uygulanır — bkz. *Veritabanı bağlantı havuzu* |
+| `DATABASE_POOL_TIMEOUT` | İsteğe bağlı. Boş bağlantı beklerken saniye cinsinden tavan; varsayılan **20** |
 
 ## Adresler
 
@@ -148,6 +151,62 @@ port 587, uygulama şifresi).
 - **HTTP güvenlik başlıkları** (`next.config.ts`) — CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-DNS-Prefetch-Control
 - **2FA/TOTP**, oturum sürüm damgası (`tokenVersion`), giriş denemesi kaydı
 - **Hata sınırları** — `[locale]/error.tsx` (3 dil), `admin/error.tsx`, `global-error.tsx`
+
+## Veritabanı bağlantı havuzu
+
+Prisma Postgres'te **doğrudan** (`postgres://…@db.prisma.io:5432`) bağlantı limiti
+plana göre 10 / 10 / 50 / 100'dür ve bunların **5'i platform işlemlerine ayrılmıştır**.
+Free veya Starter'da uygulamaya fiilen ~5 bağlantı kalır.
+
+Prisma ORM 6'nın varsayılan havuzu instance başına `CPU×2+1` (≈5-9) açar. Sitedeki
+13 sayfa `force-dynamic` olduğundan her istek veritabanına gider, dolayısıyla **tek bir
+serverless instance bütçenin tamamını tüketebilir.** 17 Kasım 2026'da bütün sayfalar bu
+yüzden `too many connections for role "prisma_migration"` ile 500 döndü. Yerel geliştirme
+de aynı veritabanını kullandığı için açık kalan bir `next dev` bütçenin yarısını tutar.
+
+`src/lib/dbUrl.ts` bu yüzden çalışma zamanında dizeye `connection_limit` ve `pool_timeout`
+ekler (`src/lib/db.ts` → `datasourceUrl`). Şema ham `DATABASE_URL`'i okumaya devam eder,
+böylece `prisma migrate` sınırsız doğrudan bağlantıyı kullanır.
+
+Sınırın bedeli ölçüldü (yerel dev sunucusu, `/tr/hakkimizda`):
+
+| Ayar | Tekil istek | 8 eşzamanlı istek, en yavaş |
+|---|---|---|
+| `connection_limit=1` | 0,62 s | **8,08 s** |
+| `connection_limit=3` | 0,35 s | **1,50 s** |
+
+Varsayılan **1**'dir: kesinti yerine kuyruk oluşturur, yani yavaşlar ama çökmez. Prisma'nın
+serverless önerisi de budur. Planınız Pro veya üzeriyse (50-100 doğrudan bağlantı) bu
+fedakârlık gereksizdir — `DATABASE_CONNECTION_LIMIT=5` yeterlidir.
+
+**Kalıcı çözüm havuzlu bağlantıya geçmektir.** Her Prisma Postgres veritabanının iki
+dizesi vardır ve bunlar **yalnızca host'ta** farklıdır:
+
+```bash
+# Uygulama trafiği — havuzlu
+DATABASE_URL="postgres://KULLANICI:PAROLA@pooled.db.prisma.io:5432/postgres?sslmode=require"
+# Prisma CLI, migrate, introspection, Studio — doğrudan
+DIRECT_URL="postgres://KULLANICI:PAROLA@db.prisma.io:5432/postgres?sslmode=require"
+```
+
+Havuzlu limitler 10 / 100 / 500 / 1000'dir, yani ödünleşme ortadan kalkar. Dizeler Prisma
+Console → *Connect to your database* altından alınır.
+
+Geçişte `prisma/schema.prisma`'ya `directUrl = env("DIRECT_URL")` eklenmelidir; aksi
+hâlde migration havuz üzerinden gitmeye çalışır. **Şema değişikliği ile ortam değişkenleri
+aynı anda yapılmalı:** şemada `env("DIRECT_URL")` varken değişken tanımsızsa Prisma CLI
+hata verir.
+
+`applyPoolLimits` havuzlu kurulumu iki işaretten tanır ve dizeye **dokunmaz**: host'un
+`pooled.` ile başlaması, ya da `DIRECT_URL`'in tanımlı olması. Yani geçiş tamamlandığında
+emniyet kemeri kendiliğinden devre dışı kalır.
+
+> **Accelerate kullanmayın.** `prisma+postgres://accelerate.prisma-data.net` ucu
+> **1 Aralık 2026'da kapanıyor.** Havuzlu TCP (`pooled.db.prisma.io`) güncel yoldur.
+
+> Prisma ORM 7'de `connection_limit`/`pool_timeout` URL parametrelerinin yerini driver
+> adapter'ın `max` ve `idleTimeoutMillis` ayarları alır; o yükseltmede `src/lib/dbUrl.ts`
+> elden geçirilmeli.
 
 ## Statik dosya önbelleği
 
