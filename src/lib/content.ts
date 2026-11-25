@@ -1,5 +1,26 @@
+import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 import { locales, type Locale } from "./i18n";
+import { CACHE_TAGS, REVALIDATE_SECONDS } from "./cacheTags";
+import { clampPage, slugIsKnown, slugIsKnownInAnyLocale } from "./contentKeys";
+
+/**
+ * Bu dosyadaki okumalar `unstable_cache` ile önbelleklenir: public sayfalar
+ * `force-dynamic` olduğu için her ziyaret ve her bot taraması veritabanına
+ * iniyordu ve Prisma Free planının aylık 200.000 işlem hakkı 25 Kasım 2026'da
+ * doldu. Gerekçe ve ölçümler:
+ * `docs/superpowers/specs/2026-11-25-veri-katmani-onbellegi-design.md`.
+ *
+ * Her okumanın iki parçası var: `raw*` gerçek sorguyu yapar, dışa aktarılan ad
+ * ise önbellekli sarmalayıcıdır. Slug ve sayfa numarası alan beşinde arada bir
+ * de **önbelleksiz** doğrulama katmanı vardır — ziyaretçi girdisi doğrudan
+ * önbellek anahtarına girerse anahtar uzayı sınırsız olur ve rastgele URL
+ * tarayan bir bot kotayı yeniden tüketir.
+ *
+ * `unstable_cache` bilerek seçildi: girdileri deploy'ları aşar, `use cache`
+ * ise aşmaz (anahtarına build ID girer). Prisma ORM 7'ye geçilirse burası
+ * gözden geçirilmeli.
+ */
 
 /**
  * URL names are per locale: `ServiceTranslation.slug` / `PostTranslation.slug`
@@ -29,7 +50,7 @@ function alternatesFrom(shared: string, translations: TranslationSlug[]): Partia
   return map;
 }
 
-export async function getPageContent(locale: Locale, keys?: string[]) {
+async function rawGetPageContent(locale: Locale, keys?: string[]) {
   const rows = await prisma.pageContent.findMany({
     where: { locale, ...(keys ? { key: { in: keys } } : {}) },
   });
@@ -38,7 +59,12 @@ export async function getPageContent(locale: Locale, keys?: string[]) {
   return map;
 }
 
-export async function getServices(locale: Locale) {
+export const getPageContent = unstable_cache(rawGetPageContent, ["getPageContent"], {
+  tags: [CACHE_TAGS.pageContent],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+async function rawGetServices(locale: Locale) {
   const services = await prisma.service.findMany({
     where: { visible: true, archivedAt: null },
     orderBy: { order: "asc" },
@@ -58,13 +84,18 @@ export async function getServices(locale: Locale) {
     }));
 }
 
+export const getServices = unstable_cache(rawGetServices, ["getServices"], {
+  tags: [CACHE_TAGS.services],
+  revalidate: REVALIDATE_SECONDS,
+});
+
 /**
  * A service by the URL name it uses in `locale`. Falls back to matching the
  * shared slug, but only for translations that carry no slug of their own — so a
  * locale that HAS its own name never also answers to another locale's spelling
  * (those get redirected instead, see `resolveServiceSlug`).
  */
-export async function getService(locale: Locale, slug: string) {
+async function rawGetService(locale: Locale, slug: string) {
   const where = { visible: true, archivedAt: null };
   const service =
     (await prisma.service.findFirst({
@@ -91,13 +122,28 @@ export async function getService(locale: Locale, slug: string) {
   };
 }
 
+const cachedGetService = unstable_cache(rawGetService, ["getService"], {
+  tags: [CACHE_TAGS.services],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+/**
+ * Slug ziyaretçiden geldiği için önce bilinen slug kümesine bakılır: bilinmeyen
+ * bir slug veritabanına inmeden `null` döner ve önbellekte girdi açmaz.
+ */
+export async function getService(locale: Locale, slug: string) {
+  const { services } = await getAllLocalizedSlugs();
+  if (!slugIsKnown(services, locale, slug)) return null;
+  return cachedGetService(locale, slug);
+}
+
 /**
  * Where a URL name that `locale` does not use should land: another locale's
  * spelling, or the shared slug from before the rename. Returns null when the
  * service is unknown or has nothing to show in this locale — then it is a 404,
  * not a redirect.
  */
-export async function resolveServiceSlug(locale: Locale, slug: string): Promise<string | null> {
+async function rawResolveServiceSlug(locale: Locale, slug: string): Promise<string | null> {
   const service = await prisma.service.findFirst({
     where: {
       visible: true,
@@ -112,11 +158,32 @@ export async function resolveServiceSlug(locale: Locale, slug: string): Promise<
   return t.slug || service.slug;
 }
 
-export async function getReferences() {
+const cachedResolveServiceSlug = unstable_cache(rawResolveServiceSlug, ["resolveServiceSlug"], {
+  tags: [CACHE_TAGS.services],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+/**
+ * Dil değiştirici buraya **başka bir dilin** slug'ıyla gelir, bu yüzden kontrol
+ * tek dile değil bütün dillere bakar; yalnızca hedef dile bakan bir kontrol dil
+ * değiştirmeyi sessizce kırardı.
+ */
+export async function resolveServiceSlug(locale: Locale, slug: string): Promise<string | null> {
+  const { services } = await getAllLocalizedSlugs();
+  if (!slugIsKnownInAnyLocale(services, slug)) return null;
+  return cachedResolveServiceSlug(locale, slug);
+}
+
+async function rawGetReferences() {
   return prisma.reference.findMany({ where: { visible: true, archivedAt: null }, orderBy: { order: "asc" } });
 }
 
-export async function getPosts(locale: Locale, publishedOnly = true) {
+export const getReferences = unstable_cache(rawGetReferences, ["getReferences"], {
+  tags: [CACHE_TAGS.references],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+async function rawGetPosts(locale: Locale, publishedOnly = true) {
   const posts = await prisma.post.findMany({
     where: { archivedAt: null, ...(publishedOnly ? { published: true } : {}) },
     orderBy: { createdAt: "desc" },
@@ -135,8 +202,13 @@ export async function getPosts(locale: Locale, publishedOnly = true) {
     }));
 }
 
+export const getPosts = unstable_cache(rawGetPosts, ["getPosts"], {
+  tags: [CACHE_TAGS.posts],
+  revalidate: REVALIDATE_SECONDS,
+});
+
 /** A published post by the URL name it uses in `locale` (see `getService`). */
-export async function getPost(locale: Locale, slug: string) {
+async function rawGetPost(locale: Locale, slug: string) {
   const where = { published: true, archivedAt: null };
   const post =
     (await prisma.post.findFirst({
@@ -162,8 +234,20 @@ export async function getPost(locale: Locale, slug: string) {
   };
 }
 
+const cachedGetPost = unstable_cache(rawGetPost, ["getPost"], {
+  tags: [CACHE_TAGS.posts],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+/** Bilinmeyen slug veritabanına inmeden `null` döner (bkz. `getService`). */
+export async function getPost(locale: Locale, slug: string) {
+  const { posts } = await getAllLocalizedSlugs();
+  if (!slugIsKnown(posts, locale, slug)) return null;
+  return cachedGetPost(locale, slug);
+}
+
 /** Where a foreign or stale post URL name should land (see `resolveServiceSlug`). */
-export async function resolvePostSlug(locale: Locale, slug: string): Promise<string | null> {
+async function rawResolvePostSlug(locale: Locale, slug: string): Promise<string | null> {
   const post = await prisma.post.findFirst({
     where: {
       published: true,
@@ -178,28 +262,48 @@ export async function resolvePostSlug(locale: Locale, slug: string): Promise<str
   return t.slug || post.slug;
 }
 
+const cachedResolvePostSlug = unstable_cache(rawResolvePostSlug, ["resolvePostSlug"], {
+  tags: [CACHE_TAGS.posts],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+/** Dil değiştirici başka dilin slug'ıyla gelir (bkz. `resolveServiceSlug`). */
+export async function resolvePostSlug(locale: Locale, slug: string): Promise<string | null> {
+  const { posts } = await getAllLocalizedSlugs();
+  if (!slugIsKnownInAnyLocale(posts, slug)) return null;
+  return cachedResolvePostSlug(locale, slug);
+}
+
 /** The rows a locale's blog listing shows: published, not archived, non-empty title in that locale. */
 function publishedPostsWhere(locale: Locale) {
   return { published: true, archivedAt: null, translations: { some: { locale, title: { not: "" } } } };
 }
 
 /** Count of posts visible on the given locale's blog (drives the Nav Blog link). */
-export async function countPublishedPosts(locale: Locale) {
+async function rawCountPublishedPosts(locale: Locale) {
   return prisma.post.count({ where: publishedPostsWhere(locale) });
 }
 
+export const countPublishedPosts = unstable_cache(rawCountPublishedPosts, ["countPublishedPosts"], {
+  tags: [CACHE_TAGS.posts],
+  revalidate: REVALIDATE_SECONDS,
+});
+
 export const POSTS_PER_PAGE = 9;
 
-/** Paginated published posts for a locale (DB-level skip/take + total count). */
-export async function getPublishedPostsPage(locale: Locale, page: number) {
+/**
+ * Paginated published posts for a locale (DB-level skip/take + total count).
+ * `page` buraya kırpılmış gelir; kırpma `getPublishedPostsPage`'te, önbelleğin
+ * dışında yapılır.
+ */
+async function rawGetPublishedPostsPage(locale: Locale, page: number) {
   const where = publishedPostsWhere(locale);
-  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const [total, posts] = await Promise.all([
     prisma.post.count({ where }),
     prisma.post.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      skip: (safePage - 1) * POSTS_PER_PAGE,
+      skip: (page - 1) * POSTS_PER_PAGE,
       take: POSTS_PER_PAGE,
       include: { translations: { where: { locale } } },
     }),
@@ -215,14 +319,30 @@ export async function getPublishedPostsPage(locale: Locale, page: number) {
       title: p.translations[0].title,
       excerpt: p.translations[0].excerpt,
     }));
-  return { items, total, page: safePage, perPage: POSTS_PER_PAGE };
+  return { items, total, page, perPage: POSTS_PER_PAGE };
+}
+
+const cachedGetPublishedPostsPage = unstable_cache(rawGetPublishedPostsPage, ["getPublishedPostsPage"], {
+  tags: [CACHE_TAGS.posts],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+/**
+ * Sayfa numarası `?page=` ile ziyaretçiden gelir. Önbelleğe girmeden önce
+ * gerçek bir sayfaya kırpılır, yoksa `?page=999999` ayrı bir anahtar ve ayrı
+ * bir sorgu açar. Aralık dışı değer son sayfayı gösterir.
+ */
+export async function getPublishedPostsPage(locale: Locale, page: number) {
+  const total = await countPublishedPosts(locale);
+  return cachedGetPublishedPostsPage(locale, clampPage(page, total, POSTS_PER_PAGE));
 }
 
 /**
  * Every locale's URL name for each visible service / published post, for the
  * sitemap. Shaped so callers never have to re-apply the shared-slug fallback.
+ * Ayrıca slug doğrulamasının kaynağıdır: bilinen slug kümesi buradan gelir.
  */
-export async function getAllLocalizedSlugs() {
+async function rawGetAllLocalizedSlugs() {
   const [services, posts] = await Promise.all([
     prisma.service.findMany({
       where: { visible: true, archivedAt: null },
@@ -239,9 +359,19 @@ export async function getAllLocalizedSlugs() {
   };
 }
 
-export async function getSettings() {
+export const getAllLocalizedSlugs = unstable_cache(rawGetAllLocalizedSlugs, ["getAllLocalizedSlugs"], {
+  tags: [CACHE_TAGS.services, CACHE_TAGS.posts],
+  revalidate: REVALIDATE_SECONDS,
+});
+
+async function rawGetSettings() {
   const rows = await prisma.setting.findMany();
   const map: Record<string, string> = {};
   for (const row of rows) map[row.key] = row.value;
   return map;
 }
+
+export const getSettings = unstable_cache(rawGetSettings, ["getSettings"], {
+  tags: [CACHE_TAGS.settings],
+  revalidate: REVALIDATE_SECONDS,
+});
