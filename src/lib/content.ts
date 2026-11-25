@@ -364,14 +364,27 @@ export const getAllLocalizedSlugs = unstable_cache(rawGetAllLocalizedSlugs, ["ge
   revalidate: REVALIDATE_SECONDS,
 });
 
-async function rawGetSettings() {
+/**
+ * Ayarların **önbelleksiz** okunuşu — tek kullanıcısı `src/lib/mail.ts`.
+ *
+ * `getSettings()` bütün `setting` satırlarını döndürüyor: `smtp_host`,
+ * `smtp_user`, `smtp_from` ve şifreli `smtp_pass` dahil. E-posta gönderimi
+ * düşük hacimli olduğu için (iletişim formu, şifre sıfırlama) gönderim başına
+ * bir sorgu ölçülebilir bir maliyet değil. Karşılığında sırlar Vercel Data
+ * Cache'ine hiç girmiyor ve panel dışından değiştirilen bir SMTP ayarı bir
+ * sonraki gönderimde geçerli oluyor.
+ *
+ * Sayfa render'ı için bunu kullanmayın; önbellekli `getSettings` var.
+ * `scripts/check-cache-tags.ts` bu istisnanın genişlemediğini doğrular.
+ */
+export async function getSettingsUncached() {
   const rows = await prisma.setting.findMany();
   const map: Record<string, string> = {};
   for (const row of rows) map[row.key] = row.value;
   return map;
 }
 
-export const getSettings = unstable_cache(rawGetSettings, ["getSettings"], {
+export const getSettings = unstable_cache(getSettingsUncached, ["getSettings"], {
   tags: [CACHE_TAGS.settings],
   revalidate: REVALIDATE_SECONDS,
 });

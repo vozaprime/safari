@@ -103,5 +103,42 @@ expect(kacakRevalidate.length, 0, "REVALIDATE_SECONDS disinda revalidate degeri 
 // Etiket kumesi tasarimdakiyle ayni olmali.
 expect(Object.values(CACHE_TAGS).sort().join(","), "page-content,posts,references,services,settings", "bes etiket, tasarimdaki adlarla");
 
+// ---------------------------------------------------------------- B bolumu
+// SMTP ayarlari onbellege girmemeli.
+//
+// getSettings() butun setting satirlarini donduruyor: smtp_host, smtp_user,
+// smtp_from ve sifreli smtp_pass dahil. E-posta gonderimi dusuk hacimli
+// oldugu icin mail.ts bunlari her seferinde taze okur -- hem sirlar Vercel
+// Data Cache'ine girmez, hem panel disindan degisen bir SMTP ayari bir
+// sonraki gonderimde gecerli olur.
+
+/** `src/` altinda verilen tanimlayiciyi import eden dosyalar. */
+function tuketenler(ad: string): string[] {
+  const out: string[] = [];
+  const gez = (dir: string) => {
+    for (const girdi of fs.readdirSync(dir, { withFileTypes: true })) {
+      const yol = `${dir}/${girdi.name}`;
+      if (girdi.isDirectory()) gez(yol);
+      else if (/\.tsx?$/.test(girdi.name)) {
+        const metin = fs.readFileSync(yol, "utf8");
+        if (new RegExp(`\\b${ad}\\b`).test(metin)) out.push(yol);
+      }
+    }
+  };
+  gez("src");
+  return out.filter((f) => f !== "src/lib/content.ts").sort();
+}
+
+expect(
+  tuketenler("getSettingsUncached").join(","),
+  "src/lib/mail.ts",
+  "getSettingsUncached'in tek tuketicisi mail.ts"
+);
+
+const mail = fs.readFileSync("src/lib/mail.ts", "utf8");
+expect(/\bgetSettings\b/.test(mail), false, "mail.ts onbellekli getSettings'i kullanmaz");
+expect(/\bgetSettingsUncached\b/.test(mail), true, "mail.ts onbelleksiz surumu kullanir");
+expect(/export async function getSettingsUncached\b/.test(content), true, "getSettingsUncached content.ts'ten disa aktariliyor");
+
 console.log(failures ? `\n${failures} HATA` : "\nhata yok");
 process.exit(failures ? 1 : 0);

@@ -1,9 +1,10 @@
 import nodemailer from "nodemailer";
-import { getSettings } from "./content";
+// Onbelleksiz okuma bilerek: SMTP ayarlari sir tasiyor (bkz. getSettingsUncached).
+import { getSettingsUncached } from "./content";
 import { decryptSecret } from "./crypto";
 
 async function buildTransport() {
-  const s = await getSettings();
+  const s = await getSettingsUncached();
   const host = s.smtp_host;
   if (!host) return null;
   const transporter = nodemailer.createTransport({
