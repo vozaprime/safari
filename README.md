@@ -55,6 +55,8 @@ npx tsx scripts/check-story-scenes.ts      # sahne/şerit/ilerleme mantığı te
 npx tsx scripts/check-story-scroll.ts      # StoryScroll işaretleme testleri (react-dom/server)
 npx tsx scripts/check-apply-about.ts       # Hakkımızda gövde doğrulayıcısı testleri
 npx tsx scripts/check-db-url.ts            # bağlantı havuzu parametreleri testleri
+npx tsx scripts/check-content-keys.ts      # önbellek anahtarı yardımcıları testleri
+npx tsx scripts/check-cache-tags.ts        # önbellek yapısı ve etiket kapsamı testleri
 ```
 
 `check-posts.ts` şunları doğrular: dil başına en az 300 kelime, her dilde 3+ başlık ·
@@ -151,6 +153,97 @@ port 587, uygulama şifresi).
 - **HTTP güvenlik başlıkları** (`next.config.ts`) — CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-DNS-Prefetch-Control
 - **2FA/TOTP**, oturum sürüm damgası (`tokenVersion`), giriş denemesi kaydı
 - **Hata sınırları** — `[locale]/error.tsx` (3 dil), `admin/error.tsx`, `global-error.tsx`
+
+## Veri katmanı önbelleği
+
+`src/lib/content.ts`'teki **12 okuma** `unstable_cache` ile önbelleklenir. Sebep: public
+sayfaların hepsi `force-dynamic`, yani her ziyaret ve her bot taraması veritabanına
+iniyordu ve Prisma Free planının aylık 200.000 işlem hakkı 25 Kasım 2026'da doldu —
+site tamamen 500 verdi. Tek bir sayfa görüntülemesi ~8 işlem harcıyordu.
+
+Gerekçe, ölçümler ve değerlendirilen alternatifler:
+`docs/superpowers/specs/2026-11-25-veri-katmani-onbellegi-design.md`.
+
+### Etiketler
+
+Beş kaba etiket, `src/lib/cacheTags.ts`'te sabit olarak: `settings`, `page-content`,
+`services`, `references`, `posts`. Sabit olmalarının sebebi, `revalidateTag("servicess")`
+gibi bir yazım hatasının hiçbir hata vermeden sessizce hiçbir şeyi temizlemesi.
+
+Panelde içeriğe dokunan **23 server action** kaydettiğinde ilgili etiketi temizler:
+
+```ts
+revalidateTag(CACHE_TAGS.services, { expire: 0 });
+```
+
+`{ expire: 0 }` bilinçli: `"max"` profili kayıttan sonraki ilk ziyaretçiye bayat içerik
+servis ederdi. Böylece panelden kaydedilen içerik bugünkü gibi anında yayında görünür.
+Mevcut `revalidatePath("/", "layout")` çağrıları da duruyor.
+
+### Güvenlik tavanı
+
+Her sarmalayıcı `REVALIDATE_SECONDS = 86400` (bir gün) kullanır. Normal akışta devreye
+girmez; yalnızca bir etiket unutulursa ya da veritabanı panel dışından değişirse
+(script, elle düzenleme) bayatlığı bir günle sınırlar. Daha kısa bir tavan kazancın
+çoğunu yerdi: ~180 önbellek girdisi saatte bir tazelenirse günde ~4.300 işlem, günde bir
+tazelenirse ~180.
+
+### Önbellek anahtarları sınırlıdır
+
+Slug ve `?page=` ziyaretçiden gelir. Doğrudan önbellek anahtarına girselerdi rastgele URL
+tarayan bir bot her denemesinde yeni anahtar ve yeni sorgu üretir, önbelleğin kurtardığı
+kota o yoldan yeniden tükenirdi. Bu yüzden beş fonksiyonun dışa aktarılan adı
+**önbelleksiz** ince bir doğrulama katmanıdır (`src/lib/contentKeys.ts`):
+
+| Fonksiyon | Koruma |
+|---|---|
+| `getService`, `getPost` | `slugIsKnown` — bilinmeyen slug veritabanına inmez |
+| `resolveServiceSlug`, `resolvePostSlug` | `slugIsKnownForRedirect` — dil değiştirici **başka dilin** slug'ıyla gelir; ayrıca **ortak slug'lar** da kabul edilir |
+| `getPublishedPostsPage` | `clampPage` — `?page=` gerçek bir sayfaya kırpılır |
+
+İki davranış değişikliği bundan doğdu: `?page=` aralık dışıysa artık **son sayfa**
+gösterilir (önceden boş liste), ve o dilde **başlığı boş** bir hizmet/yazı artık 404
+döner (önceden boş başlıklı bir sayfa render ediliyordu). İkincisi yönlendirme yoluna da
+uzanır: başlığı boş bir çevirinin slug'ından diller arası yönlendirme de 404 olur.
+
+Ortak slug'lar (`Service.slug` / `Post.slug`) özellikle korunur. Panelden bir çevirinin
+slug'ı değiştirildiğinde kaydın ortak slug'ı eski hâliyle kalır ve indekslenmiş eski
+adres ondan yönlendirilir; yalnızca alternatif haritasına bakan bir kontrol o
+bağlantıları 301 yerine **404**'e düşürürdü.
+
+Tarih alanları (`createdAt`) önbellekten **ISO string** olarak döner. `unstable_cache`
+değeri JSON'a çevirdiği için önbellek ıskasında `Date`, isabetinde string gelirdi; bu
+sessiz tip tutarsızlığını önlemek için sınırda `toISOString()` uygulanır.
+
+### SMTP ayarları önbelleğe girmez
+
+Sırlar önbelleğe **iki katmanla** girmez:
+
+1. Önbellekli `getSettings()` sonucu `stripSecretSettings` ile süzer — `smtp_` önekli
+   anahtarlar (şifreli `smtp_pass` dahil) Vercel Data Cache'ine hiç yazılmaz. Bu önemli,
+   çünkü önbellekli sürüm **her public render'da** çağrılıyor.
+2. `src/lib/mail.ts` **`getSettingsUncached()`** kullanır — tek tüketicisi odur. E-posta
+   gönderimi düşük hacimli, gönderim başına bir sorgu önemsiz; karşılığında panel
+   dışından değişen bir SMTP ayarı bir sonraki gönderimde geçerli olur.
+
+Panel ayarlar sayfası zaten `prisma.setting.findMany()`'yi doğrudan okur, formu bu
+süzmeden etkilenmez.
+
+### Yeni okuma veya içerik action'ı eklerken
+
+- **Yeni okuma:** `content.ts`'te `raw*` eşini yaz, `unstable_cache` ile sarmala, etiketini
+  `CACHE_TAGS`'ten ver, `REVALIDATE_SECONDS` kullan, ve adını
+  `scripts/check-cache-tags.ts`'teki `SARMALANACAK` listesine ekle.
+- **Yeni içerik action'ı:** `revalidateTag(CACHE_TAGS.x, { expire: 0 })` ekle ve action'ı
+  test dosyasındaki `ICERIK_ACTIONS` eşlemesine yaz. İçeriği etkilemiyorsa `ICERIK_DISI`
+  listesine. Sınıflandırmazsan test kırılır — kasıtlı.
+
+> **`scripts/apply-*.ts` panel dışından yazar.** Bu betikler etiket temizlemez; çalıştırdıktan
+> sonra içerik güvenlik tavanına (bir gün) kadar eski görünebilir. Pratik çözüm: panelden
+> aynı türden herhangi bir kaydı açıp kaydedin, etiket o anda temizlenir.
+
+> **Panel okumaları önbelleklenmez.** Yönetim paneli verisini doğrudan Prisma ile okur ve
+> öyle kalmalı; yönetici taze veri görmek zorunda.
 
 ## Veritabanı bağlantı havuzu
 
