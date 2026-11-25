@@ -140,5 +140,101 @@ expect(/\bgetSettings\b/.test(mail), false, "mail.ts onbellekli getSettings'i ku
 expect(/\bgetSettingsUncached\b/.test(mail), true, "mail.ts onbelleksiz surumu kullanir");
 expect(/export async function getSettingsUncached\b/.test(content), true, "getSettingsUncached content.ts'ten disa aktariliyor");
 
+// ---------------------------------------------------------------- C bolumu
+// Icerige dokunan her panel action'i ilgili etiketi temizlemeli.
+//
+// Etiket temizlenmezse icerik guvenlik tavanina (bir gun) kadar bayat kalir.
+// Yeni bir mutasyon action'i eklenip siniflandirilmazsa test kirilir.
+
+const actions = fs.readFileSync("src/app/admin/actions.ts", "utf8");
+const actionGovdeleri = new Map<string, string>();
+for (const parca of actions.split("export async function ").slice(1)) {
+  actionGovdeleri.set(parca.slice(0, parca.indexOf("(")), parca);
+}
+
+/** Etiket degerinden sabit ifadesine: "services" -> "CACHE_TAGS.services" */
+const sabitIfadesi = new Map(
+  Object.entries(CACHE_TAGS).map(([anahtar, deger]) => [deger as string, "CACHE_TAGS." + anahtar])
+);
+
+const ICERIK_ACTIONS: Record<string, string> = {
+  updateServiceAction: CACHE_TAGS.services,
+  createServiceAction: CACHE_TAGS.services,
+  deleteServiceAction: CACHE_TAGS.services,
+  moveServiceAction: CACHE_TAGS.services,
+  setServiceVisibleAction: CACHE_TAGS.services,
+  archiveServiceAction: CACHE_TAGS.services,
+  restoreServiceAction: CACHE_TAGS.services,
+  updateContentAction: CACHE_TAGS.pageContent,
+  addReferenceAction: CACHE_TAGS.references,
+  updateReferenceFullAction: CACHE_TAGS.references,
+  moveReferenceAction: CACHE_TAGS.references,
+  updateReferenceAction: CACHE_TAGS.references,
+  deleteReferenceAction: CACHE_TAGS.references,
+  setReferenceVisibleAction: CACHE_TAGS.references,
+  archiveReferenceAction: CACHE_TAGS.references,
+  restoreReferenceAction: CACHE_TAGS.references,
+  updateSettingsAction: CACHE_TAGS.settings,
+  createPostAction: CACHE_TAGS.posts,
+  updatePostAction: CACHE_TAGS.posts,
+  deletePostAction: CACHE_TAGS.posts,
+  setPostPublishedAction: CACHE_TAGS.posts,
+  archivePostAction: CACHE_TAGS.posts,
+  restorePostAction: CACHE_TAGS.posts,
+};
+
+// Kullanici, oturum ve mesaj tablolari public icerigi etkilemez.
+const ICERIK_DISI = [
+  "loginAction", "verifyTwoFactorLoginAction", "signOutEverywhereAction", "changePasswordAction",
+  "requestPasswordResetAction", "performPasswordResetAction", "startTwoFactorSetupAction",
+  "confirmTwoFactorAction", "disableTwoFactorAction", "disableUserTwoFactorAction",
+  "setMessageStatusAction", "updateMessageNotesAction", "deleteMessageAction", "bulkMessageAction",
+  "moveMessageStatusAction", "archiveMessageAction", "restoreMessageAction",
+  "createUserAction", "updateUserAction", "resetUserPasswordAction", "setUserRoleAction",
+  "deleteUserAction", "archiveUserAction", "restoreUserAction",
+];
+
+let etiketEksik = 0;
+for (const [ad, etiket] of Object.entries(ICERIK_ACTIONS)) {
+  const govde = actionGovdeleri.get(ad);
+  if (!govde) {
+    fail(`${ad} etiketi temizliyor`, "action bulunamadi");
+    etiketEksik++;
+  } else if (!govde.includes("revalidateTag(" + sabitIfadesi.get(etiket) + ", { expire: 0 })")) {
+    fail(`${ad} etiketi temizliyor`, `revalidateTag(${sabitIfadesi.get(etiket)}, { expire: 0 }) yok`);
+    etiketEksik++;
+  }
+}
+if (etiketEksik === 0) ok(`${Object.keys(ICERIK_ACTIONS).length} icerik action'i dogru etiketi temizliyor`);
+
+let fazladan = 0;
+for (const ad of ICERIK_DISI) {
+  const govde = actionGovdeleri.get(ad);
+  if (govde && govde.includes("revalidateTag(")) {
+    fail(`${ad} etiket temizlemiyor`, "public icerigi etkilemiyor ama revalidateTag cagiriyor");
+    fazladan++;
+  }
+}
+if (fazladan === 0) ok(`${ICERIK_DISI.length} icerik disi action gereksiz etiket temizlemiyor`);
+
+// Her mutasyon action'i iki listeden birinde olmali.
+const mutasyonDeseni = new RegExp("prisma\.[a-zA-Z]+\.(create|update|delete|upsert|createMany|updateMany|deleteMany)\b");
+const siniflandirilmamis: string[] = [];
+for (const [ad, govde] of actionGovdeleri) {
+  if (!mutasyonDeseni.test(govde)) continue;
+  if (ad in ICERIK_ACTIONS || ICERIK_DISI.includes(ad)) continue;
+  siniflandirilmamis.push(ad);
+}
+expect(siniflandirilmamis.join(","), "", "her mutasyon action'i siniflandirilmis");
+
+expect(
+  actions.includes('revalidateTag(') && !actions.includes('"max"'),
+  true,
+  "revalidateTag 'max' profiliyle cagrilmiyor (kayittan sonra bayat icerik servis edilmemeli)"
+);
+
+// Mevcut revalidatePath cagrilari korunmali (ileride ISR'a gecilirse gerekli).
+expect(actions.includes('revalidatePath("/", "layout")'), true, "revalidatePath cagrilari duruyor");
+
 console.log(failures ? `\n${failures} HATA` : "\nhata yok");
 process.exit(failures ? 1 : 0);

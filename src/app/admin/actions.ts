@@ -2,9 +2,10 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { headers, cookies } from "next/headers";
 import { prisma } from "@/lib/db";
+import { CACHE_TAGS } from "@/lib/cacheTags";
 import {
   createSession,
   destroySession,
@@ -406,6 +407,7 @@ export async function updateServiceAction(serviceId: number, formData: FormData)
   }
 
   await logAudit(session.email, "update", "service", `#${serviceId}`);
+  revalidateTag(CACHE_TAGS.services, { expire: 0 });
   revalidatePath("/", "layout");
   redirect(`/admin/services/${serviceId}?toast=saved`);
 }
@@ -440,6 +442,7 @@ export async function createServiceAction(formData: FormData) {
     },
   });
   await logAudit(session.email, "create", "service", title);
+  revalidateTag(CACHE_TAGS.services, { expire: 0 });
   revalidatePath("/", "layout");
   redirect(`/admin/services/${service.id}?toast=created`);
 }
@@ -449,6 +452,7 @@ export async function deleteServiceAction(id: number) {
   const svc = await prisma.service.findUnique({ where: { id }, include: { translations: { where: { locale: "tr" } } } });
   await prisma.service.delete({ where: { id } });
   await logAudit(session.email, "delete", "service", svc?.translations[0]?.title ?? `#${id}`);
+  revalidateTag(CACHE_TAGS.services, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/services?toast=deleted");
 }
@@ -466,6 +470,7 @@ export async function moveServiceAction(id: number, dir: "up" | "down") {
     prisma.service.update({ where: { id: a.id }, data: { order: b.order } }),
     prisma.service.update({ where: { id: b.id }, data: { order: a.order } }),
   ]);
+  revalidateTag(CACHE_TAGS.services, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/services");
 }
@@ -494,6 +499,7 @@ export async function updateContentAction(formData: FormData) {
     });
   }
   await logAudit(session.email, "update", "content");
+  revalidateTag(CACHE_TAGS.pageContent, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/content?toast=saved");
 }
@@ -507,6 +513,7 @@ export async function addReferenceAction(formData: FormData) {
   const max = await prisma.reference.aggregate({ _max: { order: true } });
   const ref = await prisma.reference.create({ data: { name, order: (max._max.order ?? 0) + 1 } });
   await logAudit(session.email, "create", "reference", name);
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
   redirect(`/admin/references/${ref.id}?toast=created`);
 }
@@ -524,6 +531,7 @@ export async function updateReferenceFullAction(id: number, formData: FormData) 
     });
     await logAudit(session.email, "update", "reference", name);
   }
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
   redirect(`/admin/references/${id}?toast=saved`);
 }
@@ -539,6 +547,7 @@ export async function moveReferenceAction(id: number, dir: "up" | "down") {
     prisma.reference.update({ where: { id: all[idx].id }, data: { order: all[swap].order } }),
     prisma.reference.update({ where: { id: all[swap].id }, data: { order: all[idx].order } }),
   ]);
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/references");
 }
@@ -556,6 +565,7 @@ export async function updateReferenceAction(id: number, formData: FormData) {
     });
     await logAudit(session.email, "update", "reference", name);
   }
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/references?toast=saved");
 }
@@ -564,6 +574,7 @@ export async function deleteReferenceAction(id: number) {
   const session = await requireSession();
   await prisma.reference.delete({ where: { id } });
   await logAudit(session.email, "delete", "reference", `#${id}`);
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/references?toast=deleted");
 }
@@ -617,6 +628,7 @@ export async function updateSettingsAction(formData: FormData) {
     });
   }
   await logAudit(session.email, "update", "settings");
+  revalidateTag(CACHE_TAGS.settings, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/settings?toast=saved");
 }
@@ -760,6 +772,7 @@ export async function createPostAction(formData: FormData) {
     },
   });
   await logAudit(session.email, "create", "post", title);
+  revalidateTag(CACHE_TAGS.posts, { expire: 0 });
   revalidatePath("/", "layout");
   redirect(`/admin/posts/${post.id}?toast=created`);
 }
@@ -792,6 +805,7 @@ export async function updatePostAction(id: number, formData: FormData) {
     });
   }
   await logAudit(session.email, "update", "post", `#${id}`);
+  revalidateTag(CACHE_TAGS.posts, { expire: 0 });
   revalidatePath("/", "layout");
   redirect(`/admin/posts/${id}?toast=saved`);
 }
@@ -800,6 +814,7 @@ export async function deletePostAction(id: number) {
   const session = await requireSession();
   await prisma.post.delete({ where: { id } });
   await logAudit(session.email, "delete", "post", `#${id}`);
+  revalidateTag(CACHE_TAGS.posts, { expire: 0 });
   revalidatePath("/", "layout");
   redirect("/admin/posts?toast=deleted");
 }
@@ -826,18 +841,21 @@ export async function setServiceVisibleAction(id: number, visible: boolean) {
   const session = await requireSession();
   await prisma.service.update({ where: { id }, data: { visible } });
   await logAudit(session.email, visible ? "show" : "hide", "service", `#${id}`);
+  revalidateTag(CACHE_TAGS.services, { expire: 0 });
   revalidatePath("/", "layout");
 }
 export async function archiveServiceAction(id: number) {
   const session = await requireSession();
   await prisma.service.update({ where: { id }, data: { archivedAt: new Date() } });
   await logAudit(session.email, "archive", "service", `#${id}`);
+  revalidateTag(CACHE_TAGS.services, { expire: 0 });
   revalidatePath("/", "layout");
 }
 export async function restoreServiceAction(id: number) {
   const session = await requireSession();
   await prisma.service.update({ where: { id }, data: { archivedAt: null } });
   await logAudit(session.email, "restore", "service", `#${id}`);
+  revalidateTag(CACHE_TAGS.services, { expire: 0 });
   revalidatePath("/", "layout");
 }
 
@@ -846,18 +864,21 @@ export async function setReferenceVisibleAction(id: number, visible: boolean) {
   const session = await requireSession();
   await prisma.reference.update({ where: { id }, data: { visible } });
   await logAudit(session.email, visible ? "show" : "hide", "reference", `#${id}`);
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
 }
 export async function archiveReferenceAction(id: number) {
   const session = await requireSession();
   await prisma.reference.update({ where: { id }, data: { archivedAt: new Date() } });
   await logAudit(session.email, "archive", "reference", `#${id}`);
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
 }
 export async function restoreReferenceAction(id: number) {
   const session = await requireSession();
   await prisma.reference.update({ where: { id }, data: { archivedAt: null } });
   await logAudit(session.email, "restore", "reference", `#${id}`);
+  revalidateTag(CACHE_TAGS.references, { expire: 0 });
   revalidatePath("/", "layout");
 }
 
@@ -866,18 +887,21 @@ export async function setPostPublishedAction(id: number, published: boolean) {
   const session = await requireSession();
   await prisma.post.update({ where: { id }, data: { published } });
   await logAudit(session.email, published ? "publish" : "unpublish", "post", `#${id}`);
+  revalidateTag(CACHE_TAGS.posts, { expire: 0 });
   revalidatePath("/", "layout");
 }
 export async function archivePostAction(id: number) {
   const session = await requireSession();
   await prisma.post.update({ where: { id }, data: { archivedAt: new Date() } });
   await logAudit(session.email, "archive", "post", `#${id}`);
+  revalidateTag(CACHE_TAGS.posts, { expire: 0 });
   revalidatePath("/", "layout");
 }
 export async function restorePostAction(id: number) {
   const session = await requireSession();
   await prisma.post.update({ where: { id }, data: { archivedAt: null } });
   await logAudit(session.email, "restore", "post", `#${id}`);
+  revalidateTag(CACHE_TAGS.posts, { expire: 0 });
   revalidatePath("/", "layout");
 }
 
