@@ -198,20 +198,36 @@ kota o yoldan yeniden tükenirdi. Bu yüzden beş fonksiyonun dışa aktarılan 
 | Fonksiyon | Koruma |
 |---|---|
 | `getService`, `getPost` | `slugIsKnown` — bilinmeyen slug veritabanına inmez |
-| `resolveServiceSlug`, `resolvePostSlug` | `slugIsKnownInAnyLocale` — dil değiştirici **başka dilin** slug'ıyla gelir |
+| `resolveServiceSlug`, `resolvePostSlug` | `slugIsKnownForRedirect` — dil değiştirici **başka dilin** slug'ıyla gelir; ayrıca **ortak slug'lar** da kabul edilir |
 | `getPublishedPostsPage` | `clampPage` — `?page=` gerçek bir sayfaya kırpılır |
 
 İki davranış değişikliği bundan doğdu: `?page=` aralık dışıysa artık **son sayfa**
 gösterilir (önceden boş liste), ve o dilde **başlığı boş** bir hizmet/yazı artık 404
-döner (önceden boş başlıklı bir sayfa render ediliyordu).
+döner (önceden boş başlıklı bir sayfa render ediliyordu). İkincisi yönlendirme yoluna da
+uzanır: başlığı boş bir çevirinin slug'ından diller arası yönlendirme de 404 olur.
+
+Ortak slug'lar (`Service.slug` / `Post.slug`) özellikle korunur. Panelden bir çevirinin
+slug'ı değiştirildiğinde kaydın ortak slug'ı eski hâliyle kalır ve indekslenmiş eski
+adres ondan yönlendirilir; yalnızca alternatif haritasına bakan bir kontrol o
+bağlantıları 301 yerine **404**'e düşürürdü.
+
+Tarih alanları (`createdAt`) önbellekten **ISO string** olarak döner. `unstable_cache`
+değeri JSON'a çevirdiği için önbellek ıskasında `Date`, isabetinde string gelirdi; bu
+sessiz tip tutarsızlığını önlemek için sınırda `toISOString()` uygulanır.
 
 ### SMTP ayarları önbelleğe girmez
 
-`getSettings()` şifreli `smtp_pass` dahil bütün ayarları döndürür. `src/lib/mail.ts`
-bu yüzden **`getSettingsUncached()`** kullanır — tek tüketicisi odur. E-posta gönderimi
-düşük hacimli, gönderim başına bir sorgu önemsiz; karşılığında sırlar Vercel Data
-Cache'ine girmez ve panel dışından değişen bir SMTP ayarı bir sonraki gönderimde
-geçerli olur.
+Sırlar önbelleğe **iki katmanla** girmez:
+
+1. Önbellekli `getSettings()` sonucu `stripSecretSettings` ile süzer — `smtp_` önekli
+   anahtarlar (şifreli `smtp_pass` dahil) Vercel Data Cache'ine hiç yazılmaz. Bu önemli,
+   çünkü önbellekli sürüm **her public render'da** çağrılıyor.
+2. `src/lib/mail.ts` **`getSettingsUncached()`** kullanır — tek tüketicisi odur. E-posta
+   gönderimi düşük hacimli, gönderim başına bir sorgu önemsiz; karşılığında panel
+   dışından değişen bir SMTP ayarı bir sonraki gönderimde geçerli olur.
+
+Panel ayarlar sayfası zaten `prisma.setting.findMany()`'yi doğrudan okur, formu bu
+süzmeden etkilenmez.
 
 ### Yeni okuma veya içerik action'ı eklerken
 
@@ -221,6 +237,10 @@ geçerli olur.
 - **Yeni içerik action'ı:** `revalidateTag(CACHE_TAGS.x, { expire: 0 })` ekle ve action'ı
   test dosyasındaki `ICERIK_ACTIONS` eşlemesine yaz. İçeriği etkilemiyorsa `ICERIK_DISI`
   listesine. Sınıflandırmazsan test kırılır — kasıtlı.
+
+> **`scripts/apply-*.ts` panel dışından yazar.** Bu betikler etiket temizlemez; çalıştırdıktan
+> sonra içerik güvenlik tavanına (bir gün) kadar eski görünebilir. Pratik çözüm: panelden
+> aynı türden herhangi bir kaydı açıp kaydedin, etiket o anda temizlenir.
 
 > **Panel okumaları önbelleklenmez.** Yönetim paneli verisini doğrudan Prisma ile okur ve
 > öyle kalmalı; yönetici taze veri görmek zorunda.

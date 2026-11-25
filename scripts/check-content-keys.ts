@@ -2,7 +2,13 @@
 //
 // Bu testler veritabanina DOKUNMAZ: contentKeys.ts saf tutuldugu icin
 // baglanti kapaliyken de calisir.
-import { clampPage, slugIsKnown, slugIsKnownInAnyLocale } from "../src/lib/contentKeys";
+import {
+  clampPage,
+  slugIsKnown,
+  slugIsKnownInAnyLocale,
+  slugIsKnownForRedirect,
+  stripSecretSettings,
+} from "../src/lib/contentKeys";
 import type { Locale } from "../src/lib/i18n";
 
 let failures = 0;
@@ -47,6 +53,48 @@ expect(slugIsKnown([], "tr", "sirket-kurulusu"), false, "bos harita false");
 // yalnizca hedef dile bakan bir kontrol dil degistirmeyi sessizce kirar.
 expect(slugIsKnownInAnyLocale(entries, "company-formation"), true, "dil degistirici: baska dilin slug'i taninir");
 expect(slugIsKnownInAnyLocale(entries, "yok-boyle-bir-sey"), false, "bilinmeyen slug her dilde false");
+
+// --- yeniden adlandirma sonrasi yonlendirme ---
+// Panelden bir cevirinin slug'i degistiginde Service.slug (ortak slug) ESKI
+// haliyle kaliyor ve eski URL ondan yonlendiriliyor. Ortak slug, cevirisi
+// kendi slug'ina sahip diller icin alternatif haritasinda GORUNMEZ; bu yuzden
+// yonlendirme kontrolu ortak slug'lari ayrica kabul etmeli, yoksa yeniden
+// adlandirmadan sonra eski adres 301 yerine 404 doner.
+const ortak = ["sirket-kurulusu", "ticaret"];
+expect(
+  slugIsKnownForRedirect(entries, ortak, "company-formation"),
+  true,
+  "baska dilin slug'i yonlendirme icin taninir"
+);
+expect(
+  slugIsKnownForRedirect([{ tr: "yeni-ad" }], ortak, "sirket-kurulusu"),
+  true,
+  "yeniden adlandirma sonrasi ESKI ortak slug yonlendirme icin taninir"
+);
+expect(
+  slugIsKnownForRedirect([{ tr: "yeni-ad" }], ortak, "hic-olmayan"),
+  false,
+  "bilinmeyen slug yonlendirme icin de taninmaz"
+);
+expect(slugIsKnownForRedirect([], [], "sirket-kurulusu"), false, "bos kumeler false");
+
+// --- sir niteligindeki ayarlar ---
+// Onbellekli getSettings her public render'da cagriliyor; smtp_* anahtarlari
+// (sifreli smtp_pass dahil) Vercel Data Cache'ine girmemeli.
+const ayarlar = {
+  site_title: "Safari",
+  contact_email: "a@b.c",
+  smtp_host: "smtp.example.com",
+  smtp_user: "kullanici",
+  smtp_pass: "sifreli-deger",
+  smtp_from: "no-reply@example.com",
+  smtp_port: "587",
+};
+const temiz = stripSecretSettings(ayarlar);
+expect(Object.keys(temiz).sort().join(","), "contact_email,site_title", "smtp_* anahtarlari ayiklanir");
+expect("smtp_pass" in temiz, false, "sifreli smtp_pass onbellekli surumde yok");
+expect(temiz.site_title, "Safari", "sir olmayan anahtarlar korunur");
+expect(Object.keys(stripSecretSettings({})).length, 0, "bos harita bos doner");
 
 console.log(failures ? `\n${failures} HATA` : "\nhata yok");
 process.exit(failures ? 1 : 0);

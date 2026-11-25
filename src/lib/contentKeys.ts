@@ -52,3 +52,42 @@ export function slugIsKnownInAnyLocale(
 ): boolean {
   return entries.some((entry) => Object.values(entry).includes(slug));
 }
+
+/**
+ * Yönlendirme için slug tanınır mı? Alternatif haritasına **ek olarak** ortak
+ * slug'ları da kabul eder.
+ *
+ * Panelden bir çevirinin slug'ı değiştirildiğinde kaydın ortak slug'ı
+ * (`Service.slug` / `Post.slug`) eski hâliyle kalır ve eski adres ondan
+ * yönlendirilir. Ortak slug, çevirisi kendi slug'ına sahip diller için
+ * alternatif haritasında görünmez (`alternatesFrom` `t.slug || shared` yazar).
+ * Yalnızca haritaya bakan bir kontrol, ilk yeniden adlandırmadan sonra
+ * indekslenmiş eski bağlantıları 301 yerine 404'e düşürürdü.
+ */
+export function slugIsKnownForRedirect(
+  entries: Partial<Record<Locale, string>>[],
+  sharedSlugs: string[],
+  slug: string
+): boolean {
+  return slugIsKnownInAnyLocale(entries, slug) || sharedSlugs.includes(slug);
+}
+
+/** Önbelleğe girmemesi gereken ayar anahtarlarının öneki. */
+const SIR_ONEKI = "smtp_";
+
+/**
+ * Ayar haritasından sır niteliğindeki anahtarları ayıklar.
+ *
+ * Önbellekli `getSettings` her public render'da çağrılır ve sonucu Vercel Data
+ * Cache'ine yazılır. `smtp_pass` şifreli olsa da SMTP yapılandırmasının
+ * tamamının orada bir güne kadar durmasına gerek yok: public sayfaların
+ * hiçbiri `smtp_*` okumuyor, e-postayı gönderen `mail.ts` ise önbelleksiz
+ * `getSettingsUncached` kullanıyor.
+ */
+export function stripSecretSettings(settings: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(settings)) {
+    if (!key.startsWith(SIR_ONEKI)) out[key] = value;
+  }
+  return out;
+}

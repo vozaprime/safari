@@ -2,7 +2,12 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "./db";
 import { locales, type Locale } from "./i18n";
 import { CACHE_TAGS, REVALIDATE_SECONDS } from "./cacheTags";
-import { clampPage, slugIsKnown, slugIsKnownInAnyLocale } from "./contentKeys";
+import {
+  clampPage,
+  slugIsKnown,
+  slugIsKnownForRedirect,
+  stripSecretSettings,
+} from "./contentKeys";
 
 /**
  * Bu dosyadaki okumalar `unstable_cache` ile önbelleklenir: public sayfalar
@@ -169,8 +174,8 @@ const cachedResolveServiceSlug = unstable_cache(rawResolveServiceSlug, ["resolve
  * değiştirmeyi sessizce kırardı.
  */
 export async function resolveServiceSlug(locale: Locale, slug: string): Promise<string | null> {
-  const { services } = await getAllLocalizedSlugs();
-  if (!slugIsKnownInAnyLocale(services, slug)) return null;
+  const { services, sharedSlugs } = await getAllLocalizedSlugs();
+  if (!slugIsKnownForRedirect(services, sharedSlugs.services, slug)) return null;
   return cachedResolveServiceSlug(locale, slug);
 }
 
@@ -196,7 +201,7 @@ async function rawGetPosts(locale: Locale, publishedOnly = true) {
       slug: p.translations[0].slug || p.slug,
       cover: p.cover,
       published: p.published,
-      createdAt: p.createdAt,
+      createdAt: p.createdAt.toISOString(),
       title: p.translations[0].title,
       excerpt: p.translations[0].excerpt,
     }));
@@ -226,7 +231,7 @@ async function rawGetPost(locale: Locale, slug: string) {
     id: post.id,
     slug: t.slug || post.slug,
     cover: post.cover,
-    createdAt: post.createdAt,
+    createdAt: post.createdAt.toISOString(),
     title: t.title,
     excerpt: t.excerpt,
     body: t.body,
@@ -269,8 +274,8 @@ const cachedResolvePostSlug = unstable_cache(rawResolvePostSlug, ["resolvePostSl
 
 /** Dil değiştirici başka dilin slug'ıyla gelir (bkz. `resolveServiceSlug`). */
 export async function resolvePostSlug(locale: Locale, slug: string): Promise<string | null> {
-  const { posts } = await getAllLocalizedSlugs();
-  if (!slugIsKnownInAnyLocale(posts, slug)) return null;
+  const { posts, sharedSlugs } = await getAllLocalizedSlugs();
+  if (!slugIsKnownForRedirect(posts, sharedSlugs.posts, slug)) return null;
   return cachedResolvePostSlug(locale, slug);
 }
 
@@ -315,7 +320,7 @@ async function rawGetPublishedPostsPage(locale: Locale, page: number) {
       slug: p.translations[0].slug || p.slug,
       cover: p.cover,
       published: p.published,
-      createdAt: p.createdAt,
+      createdAt: p.createdAt.toISOString(),
       title: p.translations[0].title,
       excerpt: p.translations[0].excerpt,
     }));
@@ -356,6 +361,13 @@ async function rawGetAllLocalizedSlugs() {
   return {
     services: services.map((s) => alternatesFrom(s.slug, s.translations)),
     posts: posts.map((p) => alternatesFrom(p.slug, p.translations)),
+    // Ortak slug'lar yonlendirme icin ayrica tasiniyor: panelden bir cevirinin
+    // slug'i degisince kaydin ortak slug'i ESKI haliyle kaliyor ve eski adres
+    // ondan yonlendiriliyor, ama alternatif haritasinda gorunmuyor.
+    sharedSlugs: {
+      services: services.map((s) => s.slug),
+      posts: posts.map((p) => p.slug),
+    },
   };
 }
 
@@ -384,7 +396,15 @@ export async function getSettingsUncached() {
   return map;
 }
 
-export const getSettings = unstable_cache(getSettingsUncached, ["getSettings"], {
+/**
+ * Public render'in gordugu ayarlar: `smtp_*` ayiklanmis hali. Sonuc Vercel
+ * Data Cache'ine yaziliyor, SMTP yapilandirmasinin orada durmasina gerek yok.
+ */
+async function rawGetPublicSettings() {
+  return stripSecretSettings(await getSettingsUncached());
+}
+
+export const getSettings = unstable_cache(rawGetPublicSettings, ["getSettings"], {
   tags: [CACHE_TAGS.settings],
   revalidate: REVALIDATE_SECONDS,
 });

@@ -78,6 +78,34 @@ for (const ad of SARMALANACAK) {
   else fail(`${ad} sarmalanmis`, `ne 'export const ${ad} = unstable_cache(' ne de '${icAd}' bulundu`);
 }
 
+// TURETILMIS kontrol -- asil koruma bu. Yukaridaki liste elle yazildigi icin
+// SONRADAN eklenen bir okumayi yakalamaz. Burada kurali kaynaktan cikariyoruz:
+// prisma'ya inen her ust duzey blok ya `raw*` adini tasir ya da bilincli
+// istisna `getSettingsUncached`'tir, ve her `raw*` bir unstable_cache
+// cagrisinda referans edilir.
+const blokDeseni = /^(?:export )?(?:async function|const) (\w+)/gm;
+const baslangiclar: { ad: string; indeks: number }[] = [];
+for (let m = blokDeseni.exec(content); m; m = blokDeseni.exec(content)) {
+  baslangiclar.push({ ad: m[1], indeks: m.index });
+}
+const bloklar = baslangiclar.map((b, i) => ({
+  ad: b.ad,
+  govde: content.slice(b.indeks, i + 1 < baslangiclar.length ? baslangiclar[i + 1].indeks : content.length),
+}));
+
+const SIR_ISTISNASI = "getSettingsUncached";
+const sarmalanmamisOkumalar = bloklar
+  .filter((b) => b.govde.includes("prisma."))
+  .filter((b) => !b.ad.startsWith("raw") && b.ad !== SIR_ISTISNASI)
+  .map((b) => b.ad);
+expect(sarmalanmamisOkumalar.join(","), "", "prisma'ya inen her blok raw* (ya da getSettingsUncached)");
+
+const referanssizRaw = bloklar
+  .filter((b) => b.ad.startsWith("raw"))
+  .filter((b) => !content.includes(`unstable_cache(${b.ad},`))
+  .map((b) => b.ad);
+expect(referanssizRaw.join(","), "", "her raw* bir unstable_cache cagrisinda kullanilmis");
+
 // Sayim: her okuma icin tam bir unstable_cache cagrisi olmali.
 const sarmalayiciSayisi = (content.match(/unstable_cache\(/g) || []).length;
 expect(sarmalayiciSayisi, SARMALANACAK.length, `unstable_cache cagrisi sayisi ${SARMALANACAK.length}`);
@@ -88,7 +116,14 @@ const etiketBloklari = content.match(/tags:\s*\[[^\]]*\]/g) || [];
 if (etiketBloklari.length === 0) {
   fail("etiketler CACHE_TAGS'ten geliyor", "hic 'tags: [...]' blogu yok");
 } else {
-  const kirli = etiketBloklari.filter((b) => /tags:\s*\[\s*(?!CACHE_TAGS\.)/.test(b));
+  const kirli = etiketBloklari.filter((b) =>
+    b
+      .slice(b.indexOf("[") + 1, b.lastIndexOf("]"))
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean)
+      .some((x) => !x.startsWith("CACHE_TAGS."))
+  );
   if (kirli.length) fail("etiketler CACHE_TAGS'ten geliyor", `duz string iceren blok: ${kirli[0]}`);
   else ok(`etiketler CACHE_TAGS'ten geliyor (${etiketBloklari.length} blok)`);
 }
@@ -121,7 +156,7 @@ function tuketenler(ad: string): string[] {
       if (girdi.isDirectory()) gez(yol);
       else if (/\.tsx?$/.test(girdi.name)) {
         const metin = fs.readFileSync(yol, "utf8");
-        if (new RegExp(`\\b${ad}\\b`).test(metin)) out.push(yol);
+        if (new RegExp(`\\b${ad}\\s*\\(`).test(metin)) out.push(yol);
       }
     }
   };
@@ -218,7 +253,7 @@ for (const ad of ICERIK_DISI) {
 if (fazladan === 0) ok(`${ICERIK_DISI.length} icerik disi action gereksiz etiket temizlemiyor`);
 
 // Her mutasyon action'i iki listeden birinde olmali.
-const mutasyonDeseni = new RegExp("prisma\.[a-zA-Z]+\.(create|update|delete|upsert|createMany|updateMany|deleteMany)\b");
+const mutasyonDeseni = /prisma\.[a-zA-Z]+\.(create|update|delete|upsert|createMany|updateMany|deleteMany)\b/;
 const siniflandirilmamis: string[] = [];
 for (const [ad, govde] of actionGovdeleri) {
   if (!mutasyonDeseni.test(govde)) continue;
@@ -232,6 +267,11 @@ expect(
   true,
   "revalidateTag 'max' profiliyle cagrilmiyor (kayittan sonra bayat icerik servis edilmemeli)"
 );
+
+const kacakEtiket = (actions.match(/revalidateTag\(([^,)]*)/g) || []).filter(
+  (c) => !c.includes("CACHE_TAGS.")
+);
+expect(kacakEtiket.join(","), "", "actions.ts'teki her revalidateTag CACHE_TAGS sabiti kullaniyor");
 
 // Mevcut revalidatePath cagrilari korunmali (ileride ISR'a gecilirse gerekli).
 expect(actions.includes('revalidatePath("/", "layout")'), true, "revalidatePath cagrilari duruyor");
